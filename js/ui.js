@@ -1,6 +1,6 @@
 import { gameState } from './state.js';
 import { MACHINES_CONFIG, RESEARCH_CONFIG, UPGRADES_CONFIG } from './data.js';
-import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock } from './game.js';
+import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock, getUpgradeMultiplier, getGlobalProductionRates } from './game.js';
 
 // DOM Elements
 const els = {
@@ -15,15 +15,24 @@ const els = {
     upgradesList: document.getElementById('upgrades-list'),
     countryDisplay: document.getElementById('country-display'),
     prestigeGain: document.getElementById('prestige-gain'),
-    currentRepBonus: document.getElementById('current-rep-bonus'),
     btnExpansion: document.getElementById('btn-expansion'),
+    countPm: document.getElementById('count-pm'),
+    countOpt: document.getElementById('count-opt'),
+    countLog: document.getElementById('count-log'),
     headhuntResult: document.getElementById('headhunter-result'),
-    // Tutorial
     tutorialModal: document.getElementById('tutorial-modal'),
-    closeTutorialBtn: document.getElementById('close-tutorial')
+    closeTutorialBtn: document.getElementById('close-tutorial'),
+    // Nowe elementy do Rate/s
+    moneyRate: document.getElementById('money-rate'),
+    knowRate: document.getElementById('know-rate'),
+    // Nowe elementy do Prestiżu
+    repBonusMoneyCurr: document.getElementById('rep-bonus-money-curr'),
+    repBonusKnowCurr: document.getElementById('rep-bonus-know-curr'),
+    repBonusMoneyNext: document.getElementById('rep-bonus-money-next'),
+    repBonusKnowNext: document.getElementById('rep-bonus-know-next')
 };
 
-// Hold-to-buy variables
+// ... (Hold-to-buy logic - bez zmian) ...
 let holdTimer = null;
 let repeatTimeout = null;
 let currentHoldSpeed = 200;
@@ -49,17 +58,18 @@ function startHolding(id, amount) {
 }
 
 export function initUI() {
-    // Tutorial Check
+    // Tutorial
     if (!localStorage.getItem('tutorial_seen')) {
-        els.tutorialModal.style.display = 'flex';
+        if(els.tutorialModal) els.tutorialModal.style.display = 'flex';
     } else {
-        els.tutorialModal.style.display = 'none';
+        if(els.tutorialModal) els.tutorialModal.style.display = 'none';
     }
-    
-    els.closeTutorialBtn.addEventListener('click', () => {
-        els.tutorialModal.style.display = 'none';
-        localStorage.setItem('tutorial_seen', 'true');
-    });
+    if(els.closeTutorialBtn) {
+        els.closeTutorialBtn.addEventListener('click', () => {
+            els.tutorialModal.style.display = 'none';
+            localStorage.setItem('tutorial_seen', 'true');
+        });
+    }
 
     // Tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -76,7 +86,7 @@ export function initUI() {
     renderListStructure(els.researchList, RESEARCH_CONFIG, 'research');
     renderUpgradesList();
 
-    // Listeners (Mysz/Dotyk)
+    // Listeners
     const handleStart = (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -131,7 +141,6 @@ function renderListStructure(container, configArray, type) {
         
         const state = type === 'machine' ? gameState.machines[config.id] : gameState.research[config.id];
         
-        // Generowanie HTML przycisków OD RAZU
         let initialControlsHTML = '';
         if (!state.unlocked) {
             initialControlsHTML = `<button class="btn-unlock-${type}" data-id="${config.id}" style="background:#e65100;width:100%;padding:5px;cursor:pointer;">ODBLOKUJ $${formatNumber(config.unlockCost)}</button>`;
@@ -197,18 +206,15 @@ function forceRebuildControls(id, type) {
     if (!container) return;
     
     if (!state.unlocked) {
-        // Sprawdź czy zablokowane przez badania
         let btnText = `ODBLOKUJ $${formatNumber(config.unlockCost)}`;
         let disabledAttr = "";
         let btnColor = "#e65100";
-        
         if (!canUnlock(id, type) && config.reqRes) {
             const reqName = RESEARCH_CONFIG.find(r => r.id === config.reqRes).name;
             btnText = `WYMAGA: ${reqName}`;
             btnColor = "#333";
             disabledAttr = "disabled";
         }
-
         container.innerHTML = `<button class="btn-unlock-${type}" data-id="${id}" style="background:${btnColor};width:100%;padding:5px;cursor:pointer;" ${disabledAttr}>${btnText}</button>`;
     } else {
         container.innerHTML = `
@@ -232,11 +238,9 @@ function checkAndRenderControls(id, type, state, config) {
     else if (state.unlocked && hasUnlockBtn) needsRebuild = true;
     else if (!state.unlocked && hasEnergyBtns) needsRebuild = true;
     
-    // Check if Requirements changed (e.g. bought research, button needs update)
     if (!state.unlocked && hasUnlockBtn) {
         const btn = hasUnlockBtn;
         const isReqMet = canUnlock(id, type);
-        // Jeśli przycisk jest wyłączony, ale wymagania są spełnione -> przebuduj
         if (btn.disabled && isReqMet) needsRebuild = true;
     }
 
@@ -252,6 +256,7 @@ function formatNumber(num) {
 }
 
 export function updateUI() {
+    // 1. ZASOBY I RATE/S
     if(els.money) els.money.textContent = `$${formatNumber(gameState.resources.money)}`;
     if(els.know) els.know.textContent = Math.floor(gameState.resources.knowledge);
     if(els.hr) els.hr.textContent = Math.floor(gameState.resources.hrPoints);
@@ -259,9 +264,32 @@ export function updateUI() {
     if(els.maxEnergy) { try { els.maxEnergy.textContent = getTotalMaxEnergy(); } catch(e) { els.maxEnergy.textContent = "10"; } }
     document.getElementById('cost-next-energy').textContent = `$${formatNumber(getNextEnergyCost())}`;
     
+    // --- DISPLAY RATE PER SECOND ---
+    const rates = getGlobalProductionRates();
+    if(els.moneyRate) els.moneyRate.textContent = `(+$${formatNumber(rates.money)}/s)`;
+    if(els.knowRate) els.knowRate.textContent = `(+${formatNumber(rates.knowledge)}/s)`;
+
+    // 2. PRESTIŻ DISPLAY (Fixed)
     if(els.rep) els.rep.textContent = Math.floor(gameState.resources.reputation);
-    // Pokaż procentowy bonus repa
-    if(els.currentRepBonus) els.currentRepBonus.textContent = `+${(gameState.resources.reputation * 10).toFixed(0)}%`;
+    
+    // Oblicz bonusy
+    const currRep = gameState.resources.reputation;
+    const gain = calculatePrestigeGain();
+    const nextRep = currRep + gain;
+
+    // Bonusy: Money +10% per Rep, Knowledge +5% per Rep
+    if(els.repBonusMoneyCurr) els.repBonusMoneyCurr.textContent = `+${(currRep * 10).toFixed(0)}%`;
+    if(els.repBonusKnowCurr) els.repBonusKnowCurr.textContent = `+${(currRep * 5).toFixed(0)}%`;
+    
+    if(els.repBonusMoneyNext) els.repBonusMoneyNext.textContent = `+${(nextRep * 10).toFixed(0)}%`;
+    if(els.repBonusKnowNext) els.repBonusKnowNext.textContent = `+${(nextRep * 5).toFixed(0)}%`;
+
+    if(els.prestigeGain) els.prestigeGain.textContent = gain;
+    const bonusBtn = document.getElementById('btn-prestige');
+    if(bonusBtn) {
+        bonusBtn.disabled = gain <= 0;
+        bonusBtn.style.opacity = gain > 0 ? "1" : "0.5";
+    }
 
     const loc = getCurrentLocation();
     if(els.countryDisplay && loc.country) els.countryDisplay.textContent = `[${loc.planet.name}] ${loc.country.name} (x${loc.country.mult})`;
@@ -286,62 +314,79 @@ export function updateUI() {
         document.getElementById('next-country-cost').textContent = `$${formatNumber(nextExp.target.reqCash)}`;
         els.btnExpansion.disabled = gameState.resources.money < nextExp.target.reqCash;
     }
-    
-    const repGain = calculatePrestigeGain();
-    if(els.prestigeGain) els.prestigeGain.textContent = repGain;
-    const bonusBtn = document.getElementById('btn-prestige');
-    if(bonusBtn) bonusBtn.disabled = repGain <= 0;
 }
 
 function updateListUI(configArray, type) {
-    const { country } = getCurrentLocation();
+    const { country, continent } = getCurrentLocation();
+    const speedUpgrade = getUpgradeMultiplier('speed_mult');
+    const globalSpeedMult = speedUpgrade.multiplier * (continent.mods?.speedMult || 1.0);
 
     configArray.forEach(config => {
         const state = type === 'machine' ? gameState.machines[config.id] : gameState.research[config.id];
         const card = document.getElementById(`${type}-card-${config.id}`);
 
         let visible = true;
-        if (type === 'machine' && isMachineReplaced && isMachineReplaced(config.id)) visible = false;
+        if (type === 'machine' && isMachineReplaced(config.id)) visible = false;
         if (type === 'machine' && !isMachineAvailableInLoc(config)) visible = false;
-
         if (card) card.style.display = visible ? 'block' : 'none';
         if (!visible) return;
 
         checkAndRenderControls(config.id, type, state, config);
 
         if (state.unlocked) {
+            let effectiveEnergy = state.assignedEnergy;
+            let hrSpeedMult = 1.0;
+
+            if (type === 'machine') {
+                const staff = getAssignedStaff(config.id);
+                const freeEnergy = staff.opt * 2;
+                effectiveEnergy += freeEnergy;
+                hrSpeedMult = 1 + (staff.log * 0.10);
+            }
+
             const percent = Math.min(100, (state.currentProgress / config.baseTime) * 100);
             const bar = document.getElementById(`bar-${type}-${config.id}`);
-            if(bar) bar.style.width = `${percent}%`;
+            
+            let realCycleTime = 999;
+            if (effectiveEnergy > 0) {
+                realCycleTime = config.baseTime / (effectiveEnergy * globalSpeedMult * hrSpeedMult);
+            }
+
+            if (bar) {
+                if (effectiveEnergy > 0 && realCycleTime < 0.1) {
+                    bar.style.width = '100%'; 
+                    bar.style.transition = 'none'; 
+                } else {
+                    bar.style.width = `${percent}%`;
+                    bar.style.transition = 'width 0.1s linear';
+                }
+            }
 
             const enVal = document.getElementById(`energy-val-${type}-${config.id}`);
             if(enVal) enVal.textContent = state.assignedEnergy;
             
             const timeEl = document.getElementById(`time-${type}-${config.id}`);
-            if(state.assignedEnergy > 0 && timeEl) {
-                const realTime = config.baseTime / state.assignedEnergy; // Tu uproszczenie
-                timeEl.textContent = realTime < 0.1 ? `${(1/realTime).toFixed(1)}/s` : `${realTime.toFixed(2)}s`;
-                timeEl.style.color = '#4caf50';
-            } else if (timeEl) {
-                timeEl.textContent = `${config.baseTime}s`;
-                timeEl.style.color = '#aaa';
-            }
-
-            // --- AKTUALIZACJA LICZB PRODUKCJI (Dynamiczna) ---
-            const prodValEl = document.getElementById(`prod-val-${type}-${config.id}`);
-            if (prodValEl) {
-                if (type === 'machine') {
-                    // Pobierz rzeczywistą produkcję z game.js
-                    const realProd = getRealMachineProduction(config.id);
-                    prodValEl.textContent = formatNumber(realProd);
-                    prodValEl.style.color = '#fff';
-                    prodValEl.style.fontWeight = 'bold';
+            if(timeEl) {
+                if (effectiveEnergy > 0) {
+                    if (realCycleTime < 1.0) {
+                        const cyclesPerSec = (1 / realCycleTime).toFixed(1);
+                        timeEl.textContent = `${cyclesPerSec} / sek`;
+                        timeEl.style.color = '#4caf50'; 
+                    } else {
+                        timeEl.textContent = `${realCycleTime.toFixed(2)}s`;
+                        timeEl.style.color = '#fff';
+                    }
                 } else {
-                    // Dla badań (uproszczone)
-                    prodValEl.textContent = config.baseProd; 
+                    timeEl.textContent = `${config.baseTime}s`;
+                    timeEl.style.color = '#aaa';
                 }
             }
-            // --------------------------------------------------
+
+            const prodValEl = document.getElementById(`prod-val-${type}-${config.id}`);
+            if (prodValEl && type === 'machine') {
+                const realProd = getRealMachineProduction(config.id);
+                prodValEl.textContent = formatNumber(realProd);
+            }
 
             if (type === 'machine') {
                 const staff = getAssignedStaff(config.id);

@@ -1,71 +1,125 @@
 export const MACHINES_CONFIG = [
-    // --- AFRYKA (Tier 1-3) ---
+    // --- TIER 1 (PODSTAWOWE - START) ---
     { 
         id: "manual_press", name: "Ręczna Prasa", 
         baseCost: 0, baseProd: 10, baseTime: 2.0, unlockCost: 0, 
-        reqRes: null, reqContinent: "africa" 
+        reqRes: null, reqContinent: null // DOSTĘPNA WSZĘDZIE
     },
+    // Wariant: Afryka (Egipt)
     { 
         id: "cobalt_cleaner", name: "Oczyszczarka Kobaltu", 
         baseCost: 500, baseProd: 35, baseTime: 1.8, unlockCost: 0, 
         reqRes: null, replaces: "manual_press", reqLoc: "egypt", reqContinent: "africa" 
     },
+    // Wariant: Europa (Polska) - Darmowy starter dla Europy!
+    { 
+        id: "coal_sorter", name: "Sortownia Węgla", 
+        baseCost: 0, baseProd: 50, baseTime: 1.5, unlockCost: 0, 
+        reqRes: null, replaces: "manual_press", reqLoc: "poland", reqContinent: "europe" 
+    },
+
+    // --- TIER 2 (LOGISTYKA) ---
     { 
         id: "conveyor_belt", name: "Taśmociąg", 
         baseCost: 100, baseProd: 60, baseTime: 4.0, unlockCost: 150, 
-        reqRes: null, reqContinent: "africa" 
+        reqRes: null, reqContinent: null // DOSTĘPNA WSZĘDZIE
     },
+    // Wariant: Afryka (RPA)
     { 
         id: "wire_isolator", name: "Izolator Drutu", 
         baseCost: 2000, baseProd: 180, baseTime: 3.5, unlockCost: 0, 
         reqRes: null, replaces: "conveyor_belt", reqLoc: "rsa", reqContinent: "africa" 
     },
+    // Wariant: Europa (Niemcy)
+    { 
+        id: "precision_belt", name: "Taśma Precyzyjna", 
+        baseCost: 5000, baseProd: 300, baseTime: 3.0, unlockCost: 0, 
+        reqRes: null, replaces: "conveyor_belt", reqLoc: "germany", reqContinent: "europe" 
+    },
+
+    // --- TIER 3 (PARA / ENERGIA) ---
     { 
         id: "steam_engine", name: "Silnik Parowy", 
         baseCost: 1000, baseProd: 400, baseTime: 8.0, unlockCost: 1200, 
-        reqRes: "thermo", reqContinent: "africa" 
+        reqRes: "thermo", reqContinent: null 
     },
-
-    // --- EUROPA (Tier 4-5) ---
-    // Te maszyny pojawią się dopiero po przeprowadzce do Europy!
+    // Wariant: Europa (Polska) - Lepsza wersja silnika
     { 
         id: "coal_turbine", name: "Turbina Węglowa", 
         baseCost: 10000, baseProd: 1200, baseTime: 7.0, unlockCost: 0, 
         reqRes: "thermo", replaces: "steam_engine", reqLoc: "poland", reqContinent: "europe" 
     },
+
+    // --- TIER 4 (ELEKTRYCZNOŚĆ) ---
     { 
         id: "electric_loom", name: "Tkacka Elektryczna", 
         baseCost: 15000, baseProd: 2500, baseTime: 6.0, unlockCost: 10000, 
-        reqRes: "electr", reqContinent: "europe" 
+        reqRes: "electr", reqContinent: null 
     },
+    // Wariant: Europa (Niemcy)
     { 
         id: "precision_lathe", name: "Tokarka Precyzyjna", 
         baseCost: 50000, baseProd: 6000, baseTime: 5.5, unlockCost: 0, 
         reqRes: "electr", replaces: "electric_loom", reqLoc: "germany", reqContinent: "europe" 
     },
+
+    // --- TIER 5 (MASOWA PRODUKCJA) ---
     { 
         id: "assembly_line", name: "Linia Montażowa", 
-        baseCost: 150000, baseProd: 15000, baseTime: 12.0, unlockCost: 100000, 
-        reqRes: "logistics", reqContinent: "europe" 
+        baseCost: 150000, baseProd: 20000, baseTime: 12.0, unlockCost: 100000, 
+        reqRes: "logistics", reqContinent: "america" 
+    },
+    // Wariant: Europa (UK)
+    { 
+        id: "royal_assembly", name: "Królewska Manufaktura", 
+        baseCost: 100000, baseProd: 25000, baseTime: 10.0, unlockCost: 0, 
+        reqRes: "logistics", replaces: "assembly_line", reqLoc: "uk", reqContinent: "europe" 
     },
 
-    // --- MARS / KOSMOS (Late Game) ---
+    // --- DALSZE TIERY (AMERYKA/AZJA/KOSMOS) ---
+    {
+        id: "diesel_generator", name: "Agregat Przemysłowy", 
+        baseCost: 500000, baseProd: 50000, baseTime: 10.0, unlockCost: 350000, 
+        reqRes: "chemistry", reqContinent: "america" 
+    },
     { 
-        id: "diesel_generator", name: "Generator Fuzyjny", 
-        baseCost: 1000000, baseProd: 50000, baseTime: 15.0, unlockCost: 500000, 
-        reqRes: "chemistry", reqContinent: "mars_base" // Zmieniłem ID kontynentu Marsa na unikalne
+        id: "cnc_machine", name: "Obrabiarka CNC", 
+        baseCost: 2000000, baseProd: 150000, baseTime: 8.0, unlockCost: 1500000, 
+        reqRes: "computing", reqContinent: "asia" 
+    },
+    { 
+        id: "robot_arm", name: "Ramię Robota", 
+        baseCost: 10000000, baseProd: 600000, baseTime: 5.0, unlockCost: 8000000, 
+        reqRes: "robotics", reqContinent: "asia" 
+    },
+    { 
+        id: "chip_fab", name: "Fabryka Chipów", 
+        baseCost: 50000000, baseProd: 2500000, baseTime: 20.0, unlockCost: 40000000, 
+        reqRes: "nanotech", reqContinent: "asia" 
+    },
+
+    // --- KOSMOS ---
+    { 
+        id: "moon_miner", name: "Koparka Helu-3", 
+        baseCost: 500000000, baseProd: 10000000, baseTime: 15.0, unlockCost: 250000000, 
+        reqRes: "robotics", reqContinent: "moon_base" 
     },
     { 
         id: "martian_printer", name: "Drukarka 4D", 
-        baseCost: 1e7, baseProd: 200000, baseTime: 8.0, unlockCost: 0, 
-        reqRes: "robotics", replaces: "cnc_machine", reqLoc: "curiosity", reqContinent: "mars_base" 
+        baseCost: 2000000000, baseProd: 50000000, baseTime: 10.0, unlockCost: 1000000000, 
+        reqRes: "ai_systems", reqContinent: "mars_base" 
+    },
+    { 
+        id: "quantum_assembler", name: "Monter Kwantowy", 
+        baseCost: 100000000000, baseProd: 5000000000, baseTime: 30.0, unlockCost: 50000000000, 
+        reqRes: "quantum", reqContinent: "venus_base" 
     }
 ];
 
 export const RESEARCH_CONFIG = [
     { id: "basic_physics", name: "Podstawy Fizyki", baseProd: 1, baseTime: 3.0, unlockCost: 0 },
     { id: "thermo", name: "Termodynamika", baseProd: 4, baseTime: 6.0, unlockCost: 500 },
-    { id: "electr", name: "Elektryczność", baseProd: 10, baseTime: 10.0, unlockCost: 5000 }, // Droższe
+    { id: "electr", name: "Elektryczność", baseProd: 10, baseTime: 10.0, unlockCost: 5000 },
     { id: "logistics", name: "Logistyka Stosowana", baseProd: 25, baseTime: 12.0, unlockCost: 25000 },
     { id: "chemistry", name: "Chemia Przemysłowa", baseProd: 60, baseTime: 15.0, unlockCost: 100000 },
     { id: "computing", name: "Informatyka", baseProd: 150, baseTime: 8.0, unlockCost: 500000 },
@@ -89,6 +143,7 @@ export const HR_CONFIG = [
 ];
 
 export const LOCATIONS = [
+    // PLANETA 1: ZIEMIA
     {
         id: "earth", name: "ZIEMIA",
         continents: [
@@ -96,29 +151,86 @@ export const LOCATIONS = [
                 id: "africa", name: "Afryka", desc: "Start.", mods: { prod: 1.0, know: 1.0, energyMax: 0 },
                 countries: [
                     { id: "congo", name: "Kongo", mult: 1, reqCash: 0 },
-                    { id: "egypt", name: "Egipt", mult: 2, reqCash: 50000 }, // 50k
-                    { id: "rsa", name: "RPA", mult: 4, reqCash: 250000 }     // 250k
+                    { id: "egypt", name: "Egipt", mult: 2, reqCash: 50000 },
+                    { id: "rsa", name: "RPA", mult: 4, reqCash: 250000 }
                 ]
             },
             {
                 id: "europe", name: "Europa", desc: "Bogata, ale biurokratyczna (-1 Energii).", mods: { prod: 1.5, know: 1.2, energyMax: -1 },
                 countries: [
-                    { id: "poland", name: "Polska", mult: 10, reqCash: 1000000 }, // 1M (Próg wyjścia z Afryki)
+                    { id: "poland", name: "Polska", mult: 10, reqCash: 1000000 }, // START EUROPY
                     { id: "germany", name: "Niemcy", mult: 25, reqCash: 50000000 },
                     { id: "uk", name: "Wielka Brytania", mult: 50, reqCash: 500000000 }
+                ]
+            },
+            {
+                id: "america", name: "Ameryka Płn.", desc: "Kapitalizm (Produkcja x2, +1 Energii).", mods: { prod: 2.0, know: 1.0, energyMax: 1 },
+                countries: [
+                    { id: "usa", name: "USA", mult: 100, reqCash: 10000000000 }, 
+                    { id: "canada", name: "Kanada", mult: 150, reqCash: 500000000000 },
+                    { id: "silicon_valley", name: "Dolina Krzemowa", mult: 300, reqCash: 1000000000000 }
+                ]
+            },
+            {
+                id: "asia", name: "Azja", desc: "Technologia (Wiedza x2, +2 Energii).", mods: { prod: 0.8, know: 2.0, energyMax: 2 },
+                countries: [
+                    { id: "china", name: "Chiny", mult: 500, reqCash: 10000000000000 }, 
+                    { id: "japan", name: "Japonia", mult: 800, reqCash: 500000000000000 },
+                    { id: "singapore", name: "Singapur", mult: 1500, reqCash: 1000000000000000 }
                 ]
             }
         ]
     },
+    // PLANETA 2: KSIĘŻYC
+    {
+        id: "moon", name: "KSIĘŻYC",
+        continents: [
+            {
+                id: "moon_base", name: "Ciemna Strona", desc: "Cisza radiowa (Wiedza x3, -2 Energii).", mods: { prod: 1.0, know: 3.0, energyMax: -2 },
+                countries: [
+                    { id: "iss_dock", name: "Orbital Dock", mult: 5000, reqCash: 10000000000000000 },
+                    { id: "tycho", name: "Krater Tycho", mult: 10000, reqCash: 5e16 },
+                    { id: "armstrong", name: "Baza Armstrong", mult: 25000, reqCash: 1e17 }
+                ]
+            }
+        ]
+    },
+    // PLANETA 3: MARS
     {
         id: "mars", name: "MARS",
         continents: [
             {
-                id: "mars_base", name: "Olympus Mons", desc: "Niska grawitacja (x5 $).", mods: { prod: 5.0, know: 0.8, energyMax: 0 },
+                id: "mars_base", name: "Olympus Mons", desc: "Niska grawitacja (Produkcja x5).", mods: { prod: 5.0, know: 0.8, energyMax: 0 },
                 countries: [
-                    { id: "curiosity", name: "Curiosity Site", mult: 1000, reqCash: 1000000000 }, // 1B
-                    { id: "musk_city", name: "Colony One", mult: 2500, reqCash: 100000000000 },
-                    { id: "core_drill", name: "Wiertło Jądra", mult: 5000, reqCash: 1e15 }
+                    { id: "curiosity", name: "Curiosity Site", mult: 50000, reqCash: 1e18 },
+                    { id: "musk_city", name: "Colony One", mult: 100000, reqCash: 1e19 },
+                    { id: "core_drill", name: "Wiertło Jądra", mult: 250000, reqCash: 1e20 }
+                ]
+            }
+        ]
+    },
+    // PLANETA 4: WENUS
+    {
+        id: "venus", name: "WENUS",
+        continents: [
+            {
+                id: "venus_base", name: "Chmury Kwasowe", desc: "Ekstremalne warunki (Produkcja x10, -5 Energii).", mods: { prod: 10.0, know: 1.0, energyMax: -5 },
+                countries: [
+                    { id: "sky_city", name: "Podniebne Miasto", mult: 1000000, reqCash: 1e22 }, 
+                    { id: "sulfur_mine", name: "Kopalnia Siarki", mult: 2500000, reqCash: 1e23 }
+                ]
+            }
+        ]
+    },
+    // PLANETA 5: TYTAN
+    {
+        id: "titan", name: "TYTAN",
+        continents: [
+            {
+                id: "titan_base", name: "Metanowe Morze", desc: "Nieskończone paliwo (+20 Energii, Produkcja x50).", mods: { prod: 50.0, know: 5.0, energyMax: 20 },
+                countries: [
+                    { id: "methane_rig", name: "Platforma Wiertnicza", mult: 10000000, reqCash: 1e25 },
+                    { id: "cryo_lab", name: "Lab. Kriogeniczne", mult: 50000000, reqCash: 1e26 }
                 ]
             }
         ]

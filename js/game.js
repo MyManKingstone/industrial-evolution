@@ -26,7 +26,6 @@ function getContinentModifiers() {
 
 // --- CORE: MATEMATYKA ---
 
-// Funkcja zwracająca rzeczywisty przychód maszyny na jeden cykl (uwzględniając wszystko)
 export function getRealMachineProduction(machineId) {
     const config = MACHINES_CONFIG.find(m => m.id === machineId);
     const state = gameState.machines[machineId];
@@ -36,8 +35,6 @@ export function getRealMachineProduction(machineId) {
     const contMods = getContinentModifiers();
     const repMult = 1 + (gameState.resources.reputation * 0.1); 
     const prodUpgrade = getUpgradeMultiplier('production_mult');
-    
-    // HR Bonus
     const hr = getHRBonuses(machineId);
 
     // Baza * Level * Kraj * Kontynent * Reputacja * Ulepszenia * HR
@@ -49,6 +46,61 @@ export function getRealMachineProduction(machineId) {
     production *= hr.prodMult;
 
     return production;
+}
+
+// NOWA FUNKCJA: Oblicza przychód na sekundę (Money i Knowledge)
+export function getGlobalProductionRates() {
+    let moneyPerSec = 0;
+    let knowPerSec = 0;
+
+    // Wspólne mnożniki prędkości
+    const speedUpgrade = getUpgradeMultiplier('speed_mult');
+    const contMods = getContinentModifiers();
+    const globalSpeedMult = speedUpgrade.multiplier * contMods.speedMult;
+
+    // 1. Maszyny (Money)
+    MACHINES_CONFIG.forEach(config => {
+        const state = gameState.machines[config.id];
+        if (!state || !state.unlocked || !isMachineAvailableInLoc(config) || isMachineReplaced(config.id)) return;
+
+        const hr = getHRBonuses(config.id);
+        const workingEnergy = state.assignedEnergy + hr.energyFree;
+        
+        if (workingEnergy > 0) {
+            // Wzór: (ZyskNaCykl / CzasBazowy) * PrędkośćRzeczywista
+            const revenuePerCycle = getRealMachineProduction(config.id);
+            // Prędkość = Energia * GlobalSpeed * HRSpeed
+            const speed = workingEnergy * globalSpeedMult * hr.speedMult;
+            
+            // Ilość cykli na sekundę = Speed / BaseTime
+            const cyclesPerSec = speed / config.baseTime;
+            
+            moneyPerSec += revenuePerCycle * cyclesPerSec;
+        }
+    });
+
+    // 2. Badania (Knowledge)
+    const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
+    const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
+    const globalKnowMult = contMods.know * knowUpgrade.multiplier * repKnowMult;
+
+    RESEARCH_CONFIG.forEach(config => {
+        const state = gameState.research[config.id];
+        if (!state || !state.unlocked) return;
+
+        const workingEnergy = state.assignedEnergy; // Badania nie mają HR (na razie)
+        
+        if (workingEnergy > 0) {
+            const baseGain = config.baseProd * state.level;
+            const realGain = baseGain * globalKnowMult;
+            const speed = workingEnergy * globalSpeedMult; // Używają tych samych bonusów prędkości co maszyny
+            const cyclesPerSec = speed / config.baseTime;
+
+            knowPerSec += realGain * cyclesPerSec;
+        }
+    });
+
+    return { money: moneyPerSec, knowledge: knowPerSec };
 }
 
 // --- POZOSTAŁE HELPERSY ---
@@ -124,12 +176,10 @@ export function updateGame(deltaTime) {
     const contMods = getContinentModifiers();
     const globalSpeedMult = speedUpgrade.multiplier * contMods.speedMult;
 
-    // Badania (prostsze, nie wymagają przeliczania co klatkę $ bo są stałe)
     const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
     const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
     const globalKnowMult = contMods.know * knowUpgrade.multiplier * repKnowMult;
 
-    // MASZYNY
     MACHINES_CONFIG.forEach(config => {
         const machineState = gameState.machines[config.id];
         
@@ -145,7 +195,6 @@ export function updateGame(deltaTime) {
         machineState.currentProgress += progressAdded;
 
         if (machineState.currentProgress >= config.baseTime) {
-            // Używamy nowej funkcji, żeby logika zarabiania i wyświetlania była identyczna
             const revenue = getRealMachineProduction(config.id);
             
             gameState.resources.money += revenue;
@@ -155,7 +204,6 @@ export function updateGame(deltaTime) {
         }
     });
 
-    // BADANIA
     RESEARCH_CONFIG.forEach(config => {
         const resState = gameState.research[config.id];
         if (!resState.unlocked || resState.assignedEnergy <= 0) return;
@@ -177,10 +225,8 @@ export function updateGame(deltaTime) {
 export function isMachineAvailableInLoc(machineConfig) {
     const { continent, country } = getCurrentLocation();
     
-    // 1. Sprawdź Kontynent (HARD CHECK)
     if (machineConfig.reqContinent && machineConfig.reqContinent !== continent.id) return false;
 
-    // 2. Sprawdź Kraj (SOFT CHECK - jeśli odblokowana, zostaje)
     const isUnlocked = gameState.machines[machineConfig.id]?.unlocked;
     if (machineConfig.reqLoc && country.id !== machineConfig.reqLoc && !isUnlocked) return false;
 
@@ -190,10 +236,8 @@ export function isMachineAvailableInLoc(machineConfig) {
 export function isMachineReplaced(machineId) {
     const replacement = MACHINES_CONFIG.find(m => m.replaces === machineId);
     if (replacement) {
-        // Jeśli nowa maszyna jest na tym samym kontynencie...
         if (isMachineAvailableInLoc(replacement)) {
             const replacementState = gameState.machines[replacement.id];
-            // ...i jest odblokowana LUB jest dedykowana dla tego kraju
             if (replacementState && replacementState.unlocked) return true;
             
             const { country } = getCurrentLocation();

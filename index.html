@@ -30,8 +30,14 @@
             </div>
             
             <div class="resources-panel">
-                <div class="res-item">Gotówka: <span id="res-money">$0</span></div>
-                <div class="res-item" style="color: #64b5f6;">Wiedza: <span id="res-knowledge">0</span></div>
+                <div class="res-item">
+                    Gotówka: <span id="res-money">$0</span> 
+                    <small id="money-rate" style="color:#aaa; font-size:0.7em;">(+$0/s)</small>
+                </div>
+                <div class="res-item" style="color: #64b5f6;">
+                    Wiedza: <span id="res-knowledge">0</span>
+                    <small id="know-rate" style="color:#81d4fa; font-size:0.7em;">(+0/s)</small>
+                </div>
                 <div class="res-item" style="color: #ff5252;">HR: <span id="res-hr">0</span></div>
                 <div class="res-item">
                     Moc: <span id="res-energy">0</span> / <span id="res-max-energy">10</span>
@@ -98,8 +104,19 @@
 
                 <div class="panel prestige-panel">
                     <h3>Restrukturyzacja</h3>
-                    <p>Bonus Reputacji: <span id="current-rep-bonus" style="color:#bb86fc">+0%</span></p>
-                    <p>Zysk przy reset: <span id="prestige-gain" style="color: #03dac6;">0</span> Rep</p>
+                    <div style="font-size: 0.85em; margin-bottom: 10px;">
+                        <p>Obecny Bonus:</p>
+                        <ul style="padding-left: 20px; color: #bb86fc;">
+                            <li>Pieniądze: <span id="rep-bonus-money-curr">+0%</span></li>
+                            <li>Wiedza: <span id="rep-bonus-know-curr">+0%</span></li>
+                        </ul>
+                        <p>Po Resecie:</p>
+                        <ul style="padding-left: 20px; color: #03dac6;">
+                            <li>Pieniądze: <span id="rep-bonus-money-next">+0%</span></li>
+                            <li>Wiedza: <span id="rep-bonus-know-next">+0%</span></li>
+                        </ul>
+                    </div>
+                    <p>Zyskasz: <span id="prestige-gain" style="color: #03dac6; font-weight: bold; font-size: 1.2em;">0</span> Rep</p>
                     <button id="btn-prestige" disabled>RESTRUKTURYZACJA</button>
                 </div>
 
