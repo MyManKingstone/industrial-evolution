@@ -3,7 +3,7 @@ export const MACHINES_CONFIG = [
     { 
         id: "manual_press", name: "Ręczna Prasa", 
         baseCost: 0, baseProd: 10, baseTime: 2.0, unlockCost: 0, 
-        reqRes: null, reqContinent: null // Dostępna wszędzie (chyba że zastąpiona)
+        reqRes: null, reqContinent: null 
     },
     { 
         id: "cobalt_cleaner", name: "Oczyszczarka Kobaltu", 
@@ -20,7 +20,7 @@ export const MACHINES_CONFIG = [
     { 
         id: "conveyor_belt", name: "Taśmociąg", 
         baseCost: 100, baseProd: 60, baseTime: 4.0, unlockCost: 150, 
-        reqRes: null, reqContinent: null // Dostępna wszędzie
+        reqRes: null, reqContinent: null 
     },
     { 
         id: "wire_isolator", name: "Izolator Drutu", 
@@ -32,7 +32,7 @@ export const MACHINES_CONFIG = [
     { 
         id: "steam_engine", name: "Silnik Parowy", 
         baseCost: 1000, baseProd: 400, baseTime: 8.0, unlockCost: 1200, 
-        reqRes: "thermo", reqContinent: null // Dostępna wszędzie
+        reqRes: "thermo", reqContinent: null 
     },
     { 
         id: "coal_turbine", name: "Turbina Węglowa", 
@@ -130,12 +130,14 @@ export const HR_CONFIG = [
     { id: "log", name: "Logistics Spec.", cost: 2, desc: "+10% Prędkości, +1 Koszt Energii" }
 ];
 
+// --- MAPA ---
 export const LOCATIONS = [
     {
-        id: "earth", name: "ZIEMIA",
+        id: "earth", name: "ZIEMIA", reqCash: 0, // Ziemia jest darmowa (start)
         continents: [
             {
-                id: "africa", name: "Afryka", desc: "Start.", mods: { prod: 1.0, know: 1.0, energyMax: 0 },
+                id: "africa", name: "Afryka", reqCash: 0, // Afryka jest darmowa (start)
+                desc: "Start.", mods: { prod: 1.0, know: 1.0, energyMax: 0 },
                 countries: [
                     { id: "congo", name: "Kongo", mult: 1, reqCash: 0 },
                     { id: "egypt", name: "Egipt", mult: 2, reqCash: 50000 },
@@ -143,7 +145,8 @@ export const LOCATIONS = [
                 ]
             },
             {
-                id: "europe", name: "Europa", desc: "Bogata, ale biurokratyczna (-1 Energii).", mods: { prod: 1.5, know: 1.2, energyMax: -1 },
+                id: "europe", name: "Europa", reqCash: 1000000, // <--- CENA WEJŚCIA: 1M
+                desc: "Bogata, ale biurokratyczna (-1 Energii).", mods: { prod: 1.5, know: 1.2, energyMax: -1 },
                 countries: [
                     { id: "poland", name: "Polska", mult: 10, reqCash: 1000000 },
                     { id: "germany", name: "Niemcy", mult: 25, reqCash: 50000000 },
@@ -151,7 +154,8 @@ export const LOCATIONS = [
                 ]
             },
             {
-                id: "america", name: "Ameryka Płn.", desc: "Kapitalizm.", mods: { prod: 2.0, know: 1.0, energyMax: 1 },
+                id: "america", name: "Ameryka Płn.", reqCash: 10000000000, // <--- CENA: 10B
+                desc: "Kapitalizm.", mods: { prod: 2.0, know: 1.0, energyMax: 1 },
                 countries: [
                     { id: "usa", name: "USA", mult: 100, reqCash: 10000000000 },
                     { id: "canada", name: "Kanada", mult: 150, reqCash: 500000000000 },
@@ -159,7 +163,8 @@ export const LOCATIONS = [
                 ]
             },
             {
-                id: "asia", name: "Azja", desc: "Technologia.", mods: { prod: 0.8, know: 2.0, energyMax: 2 },
+                id: "asia", name: "Azja", reqCash: 10000000000000, // <--- CENA: 10T
+                desc: "Technologia.", mods: { prod: 0.8, know: 2.0, energyMax: 2 },
                 countries: [
                     { id: "china", name: "Chiny", mult: 500, reqCash: 10000000000000 },
                     { id: "japan", name: "Japonia", mult: 800, reqCash: 500000000000000 },
@@ -169,12 +174,13 @@ export const LOCATIONS = [
         ]
     },
     {
-        id: "moon", name: "KSIĘŻYC",
+        id: "moon", name: "KSIĘŻYC", reqCash: 10000000000000000, // <--- CENA: 10Q (1e16)
         continents: [
             {
-                id: "moon_base", name: "Ciemna Strona", desc: "Cisza radiowa.", mods: { prod: 1.0, know: 3.0, energyMax: -2 },
+                id: "moon_base", name: "Ciemna Strona", reqCash: 10000000000000000, // <--- CENA TEŻ TUTAJ
+                desc: "Cisza radiowa.", mods: { prod: 1.0, know: 3.0, energyMax: -2 },
                 countries: [
-                    { id: "iss_dock", name: "Orbital Dock", mult: 5000, reqCash: 1e16 },
+                    { id: "iss_dock", name: "Orbital Dock", mult: 5000, reqCash: 10000000000000000 },
                     { id: "tycho", name: "Krater Tycho", mult: 10000, reqCash: 5e16 },
                     { id: "armstrong", name: "Baza Armstrong", mult: 25000, reqCash: 1e17 }
                 ]
@@ -182,10 +188,11 @@ export const LOCATIONS = [
         ]
     },
     {
-        id: "mars", name: "MARS",
+        id: "mars", name: "MARS", reqCash: 1e18, // <--- CENA
         continents: [
             {
-                id: "mars_base", name: "Olympus Mons", desc: "Niska grawitacja.", mods: { prod: 5.0, know: 0.8, energyMax: 0 },
+                id: "mars_base", name: "Olympus Mons", reqCash: 1e18, // <--- CENA
+                desc: "Niska grawitacja.", mods: { prod: 5.0, know: 0.8, energyMax: 0 },
                 countries: [
                     { id: "curiosity", name: "Curiosity Site", mult: 50000, reqCash: 1e18 },
                     { id: "musk_city", name: "Colony One", mult: 100000, reqCash: 1e19 },
@@ -195,10 +202,11 @@ export const LOCATIONS = [
         ]
     },
     {
-        id: "venus", name: "WENUS",
+        id: "venus", name: "WENUS", reqCash: 1e22, // <--- CENA
         continents: [
             {
-                id: "venus_base", name: "Chmury Kwasowe", desc: "Ekstremalne warunki.", mods: { prod: 10.0, know: 1.0, energyMax: -5 },
+                id: "venus_base", name: "Chmury Kwasowe", reqCash: 1e22,
+                desc: "Ekstremalne warunki.", mods: { prod: 10.0, know: 1.0, energyMax: -5 },
                 countries: [
                     { id: "sky_city", name: "Podniebne Miasto", mult: 1000000, reqCash: 1e22 },
                     { id: "sulfur_mine", name: "Kopalnia Siarki", mult: 2500000, reqCash: 1e23 }
@@ -207,10 +215,11 @@ export const LOCATIONS = [
         ]
     },
     {
-        id: "titan", name: "TYTAN",
+        id: "titan", name: "TYTAN", reqCash: 1e25, // <--- CENA
         continents: [
             {
-                id: "titan_base", name: "Metanowe Morze", desc: "Nieskończone paliwo.", mods: { prod: 50.0, know: 5.0, energyMax: 20 },
+                id: "titan_base", name: "Metanowe Morze", reqCash: 1e25,
+                desc: "Nieskończone paliwo.", mods: { prod: 50.0, know: 5.0, energyMax: 20 },
                 countries: [
                     { id: "methane_rig", name: "Platforma Wiertnicza", mult: 10000000, reqCash: 1e25 },
                     { id: "cryo_lab", name: "Lab. Kriogeniczne", mult: 50000000, reqCash: 1e26 }

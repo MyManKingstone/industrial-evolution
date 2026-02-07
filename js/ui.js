@@ -14,6 +14,7 @@ const els = {
     researchList: document.getElementById('research-list'),
     upgradesList: document.getElementById('upgrades-list'),
     countryDisplay: document.getElementById('country-display'),
+    locationMods: document.getElementById('location-mods'), // NOWY ELEMENT
     prestigeGain: document.getElementById('prestige-gain'),
     btnExpansion: document.getElementById('btn-expansion'),
     countPm: document.getElementById('count-pm'),
@@ -57,7 +58,6 @@ function startHolding(id, amount) {
 
 // --- INITIALIZATION ---
 export function initUI() {
-    // Tutorial
     if (!localStorage.getItem('tutorial_seen')) {
         if(els.tutorialModal) els.tutorialModal.style.display = 'flex';
     } else {
@@ -71,7 +71,6 @@ export function initUI() {
         });
     }
 
-    // Tabs navigation
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -82,12 +81,10 @@ export function initUI() {
         });
     });
 
-    // Render static structures
     renderListStructure(els.machinesList, MACHINES_CONFIG, 'machine');
     renderListStructure(els.researchList, RESEARCH_CONFIG, 'research');
     renderUpgradesList();
 
-    // Mouse/Touch Handlers for Hold-to-buy
     const handleStart = (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -102,7 +99,6 @@ export function initUI() {
     document.addEventListener('touchstart', handleStart, { passive: false });
     document.addEventListener('touchend', handleEnd);
 
-    // Global Click Handler
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -130,12 +126,10 @@ export function initUI() {
         else if (btn.classList.contains('btn-assign-hr')) { assignStaff(id, btn.dataset.type, 1); updateUI(); }
     });
 
-    // Special Buttons
     if(document.getElementById('btn-buy-energy')) document.getElementById('btn-buy-energy').addEventListener('click', () => { buyMaxEnergy(); updateUI(); });
     if(document.getElementById('btn-prestige')) document.getElementById('btn-prestige').addEventListener('click', doRestructuring);
     if(els.btnExpansion) els.btnExpansion.addEventListener('click', doExpansion);
 
-    // Select Change for Headhunters
     document.addEventListener('change', (e) => {
         if (e.target.classList.contains('specialist-select')) {
             equipSpecialist(e.target.dataset.id, e.target.value);
@@ -143,7 +137,6 @@ export function initUI() {
         }
     });
     
-    // Initial Update
     updateUI();
 }
 
@@ -160,7 +153,6 @@ function renderListStructure(container, configArray, type) {
         
         const state = type === 'machine' ? gameState.machines[config.id] : gameState.research[config.id];
         
-        // Initial Controls Generation
         let initialControlsHTML = '';
         if (!state.unlocked) {
             initialControlsHTML = `<button class="btn-unlock-${type}" data-id="${config.id}" style="background:#e65100;width:100%;padding:5px;cursor:pointer;">ODBLOKUJ $${formatNumber(config.unlockCost)}</button>`;
@@ -238,7 +230,6 @@ function forceRebuildControls(id, type) {
         let disabledAttr = "";
         let btnColor = "#e65100";
         
-        // Sprawdzanie wymagań badań
         if (!canUnlock(id, type) && config.reqRes) {
             const reqName = RESEARCH_CONFIG.find(r => r.id === config.reqRes).name;
             btnText = `WYMAGA: ${reqName}`;
@@ -267,12 +258,10 @@ function checkAndRenderControls(id, type, state, config) {
 
     let needsRebuild = false;
     
-    // Warunki, kiedy trzeba przebudować HTML
     if (isEmpty) needsRebuild = true;
     else if (state.unlocked && hasUnlockBtn) needsRebuild = true;
     else if (!state.unlocked && hasEnergyBtns) needsRebuild = true;
     else if (!state.unlocked && hasUnlockBtn) {
-        // Sprawdź czy odblokowało się wymaganie (np. kupiono badanie) - wtedy trzeba odświeżyć przycisk
         const btn = hasUnlockBtn;
         const isReqMet = canUnlock(id, type);
         if (btn.disabled && isReqMet) needsRebuild = true;
@@ -304,7 +293,6 @@ export function showSaveToast() {
 
 // --- MAIN UPDATE LOOP ---
 export function updateUI() {
-    // Resources & Rates
     if(els.money) els.money.textContent = `$${formatNumber(gameState.resources.money)}`;
     if(els.know) els.know.textContent = Math.floor(gameState.resources.knowledge);
     if(els.hr) els.hr.textContent = Math.floor(gameState.resources.hrPoints);
@@ -322,7 +310,6 @@ export function updateUI() {
     if(els.moneyRate) els.moneyRate.textContent = `(+$${formatNumber(rates.money)}/s)`;
     if(els.knowRate) els.knowRate.textContent = `(+${formatNumber(rates.knowledge)}/s)`;
 
-    // Prestige Panel
     if(els.rep) els.rep.textContent = Math.floor(gameState.resources.reputation);
     
     const currRep = gameState.resources.reputation;
@@ -341,17 +328,32 @@ export function updateUI() {
         bonusBtn.style.opacity = gain > 0 ? "1" : "0.5";
     }
 
-    // Location Display
     const loc = getCurrentLocation();
     if(els.countryDisplay && loc.country) {
-        els.countryDisplay.textContent = `[${loc.planet.name}] ${loc.country.name} (x${loc.country.mult})`;
+        els.countryDisplay.textContent = `[${loc.planet.name}] ${loc.country.name}`;
     }
 
-    // Render Lists
+    // --- NOWY FRAGMENT: WYPEŁNIANIE BONUSÓW LOKALNYCH ---
+    if (els.locationMods && loc.country) {
+        const cMods = loc.continent.mods || {};
+        let info = [];
+
+        // Bonus Kraju
+        info.push(`Zysk: x${loc.country.mult}`);
+
+        // Bonusy Kontynentu
+        if (cMods.prod && cMods.prod !== 1.0) info.push(`Region Prod: x${cMods.prod}`);
+        if (cMods.know && cMods.know !== 1.0) info.push(`Wiedza: x${cMods.know}`);
+        if (cMods.energyMax && cMods.energyMax !== 0) info.push(`Max Moc: ${cMods.energyMax > 0 ? '+' : ''}${cMods.energyMax}`);
+        if (cMods.speedMult && cMods.speedMult !== 1.0) info.push(`Prędkość: x${cMods.speedMult}`);
+
+        els.locationMods.textContent = info.join(' | ');
+    }
+    // ----------------------------------------------------
+
     updateListUI(MACHINES_CONFIG, 'machine');
     updateListUI(RESEARCH_CONFIG, 'research');
 
-    // Upgrades
     UPGRADES_CONFIG.forEach(up => {
         const currentLvl = gameState.upgrades[up.id] || 0;
         const currentCost = getUpgradeCost(up.id);
@@ -364,12 +366,10 @@ export function updateUI() {
         if(btn) btn.disabled = gameState.resources.knowledge < currentCost || currentLvl >= up.maxLevel;
     });
 
-    // HR Counters
     if(els.countPm) els.countPm.textContent = gameState.employees.pm;
     if(els.countOpt) els.countOpt.textContent = gameState.employees.opt;
     if(els.countLog) els.countLog.textContent = gameState.employees.log;
 
-    // Expansion
     const nextExp = checkNextExpansion();
     if (nextExp && els.btnExpansion) {
         document.getElementById('next-country-name').textContent = nextExp.target.name;
@@ -387,7 +387,6 @@ function updateListUI(configArray, type) {
         const state = type === 'machine' ? gameState.machines[config.id] : gameState.research[config.id];
         const card = document.getElementById(`${type}-card-${config.id}`);
 
-        // Visibility Checks
         let visible = true;
         if (type === 'machine' && isMachineReplaced(config.id)) visible = false;
         if (type === 'machine' && !isMachineAvailableInLoc(config)) visible = false;
@@ -395,24 +394,15 @@ function updateListUI(configArray, type) {
         if (card) card.style.display = visible ? 'block' : 'none';
         if (!visible) return;
 
-        // Ensure controls are correct (rebuild if needed)
         checkAndRenderControls(config.id, type, state, config);
 
         if (state.unlocked) {
-            // --- HEADHUNTER DROPDOWN POPULATION FIX ---
+            // Dropdown Logic
             if (type === 'machine') {
                 const select = document.getElementById(`sel-spec-${config.id}`);
                 if (select) {
-                    // Only rebuild if count changed (simple optimization) or just rebuild always to be safe?
-                    // Let's rebuild cleanly.
-                    
-                    // Save current selection
                     const currentSelection = select.value;
-                    
-                    // Remove all except first
                     while (select.options.length > 1) { select.remove(1); }
-
-                    // Find candidates
                     const candidates = gameState.headhunters.filter(h => h.targetId === config.id);
                     candidates.forEach(cand => {
                         const opt = document.createElement('option');
@@ -420,18 +410,12 @@ function updateListUI(configArray, type) {
                         opt.textContent = `${cand.name} (+${(cand.bonus*100).toFixed(0)}%)`;
                         select.appendChild(opt);
                     });
-
-                    // Restore selection or set from state
                     if (gameState.machineSpecialists[config.id]) {
                         select.value = gameState.machineSpecialists[config.id];
-                    } else if (currentSelection) {
-                         // If user selected something but not saved in state yet? (Unlikely with this flow)
                     }
                 }
             }
-            // ------------------------------------------
 
-            // Calculate Effective Energy & Speed
             let effectiveEnergy = state.assignedEnergy;
             let hrSpeedMult = 1.0;
 
@@ -441,11 +425,9 @@ function updateListUI(configArray, type) {
                 hrSpeedMult = 1 + (staff.log * 0.10);
             }
 
-            // Progress Bar
             const percent = Math.min(100, (state.currentProgress / config.baseTime) * 100);
             const bar = document.getElementById(`bar-${type}-${config.id}`);
             
-            // Real Cycle Time Calculation
             let realCycleTime = 999;
             if (effectiveEnergy > 0) {
                 realCycleTime = config.baseTime / (effectiveEnergy * globalSpeedMult * hrSpeedMult);
@@ -461,7 +443,6 @@ function updateListUI(configArray, type) {
                 }
             }
 
-            // Text Updates
             const enVal = document.getElementById(`energy-val-${type}-${config.id}`);
             if(enVal) enVal.textContent = state.assignedEnergy;
             
@@ -488,7 +469,6 @@ function updateListUI(configArray, type) {
                 prodValEl.textContent = formatNumber(realProd);
             }
 
-            // HR Counts
             if (type === 'machine') {
                 const staff = getAssignedStaff(config.id);
                 const pms = document.getElementById(`val-pm-${config.id}`);
@@ -499,7 +479,6 @@ function updateListUI(configArray, type) {
                 if(logs) logs.textContent = staff.log;
             }
         } else {
-            // Locked State Button Opacity
             const unlockBtn = document.querySelector(`#controls-${type}-${config.id} button`);
             if (unlockBtn && !unlockBtn.disabled) {
                 unlockBtn.style.opacity = gameState.resources.money < config.unlockCost ? "0.5" : "1";
