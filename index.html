@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industrial Evolution Idle</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <h1>INDUSTRIAL EVOLUTION</h1>
+                <div class="country-badge" id="country-display">Ziemia (x1)</div>
+            </div>
+            
+            <div class="resources-panel">
+                <div class="res-item">Gotówka: <span id="res-money">$0</span></div>
+                <div class="res-item" style="color: #64b5f6;">Wiedza: <span id="res-knowledge">0</span></div>
+                <div class="res-item" style="color: #ff5252;">HR: <span id="res-hr">0</span></div>
+                <div class="res-item">
+                    Moc: <span id="res-energy">0</span> / <span id="res-max-energy">10</span>
+                    <button id="btn-buy-energy" class="small-btn">[+] (<span id="cost-next-energy">$50</span>)</button>
+                </div>
+                <div class="res-item" style="color: #bb86fc;">Rep: <span id="res-rep">0</span></div>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="production">FABRYKA</button>
+            <button class="tab-btn" data-tab="research">LABORATORIUM</button>
+            <button class="tab-btn" data-tab="hr">DZIAŁ KADR (HR)</button>
+        </nav>
+
+        <div class="game-layout">
+            <main id="main-content">
+                
+                <div id="tab-production" class="tab-content active">
+                    <h2>Linie Produkcyjne</h2>
+                    <div id="machines-list"></div>
+                </div>
+
+                <div id="tab-research" class="tab-content" style="display: none;">
+                    <h2>Projekty Badawcze</h2>
+                    <div id="research-list"></div>
+                    <h2 style="margin-top: 30px; border-top: 1px solid #333; padding-top: 10px;">Technologie</h2>
+                    <div id="upgrades-list" class="upgrades-grid"></div>
+                </div>
+
+                <div id="tab-hr" class="tab-content" style="display: none;">
+                    <h2>Zarządzanie Zasobami Ludzkimi</h2>
+                    
+                    <div class="hr-exchange-panel panel">
+                        <h3>Rekrutacja</h3>
+                        <p>Wymień zasoby na Punkty HR.</p>
+                        <p>Koszt: <span id="hr-cost-money">$10k</span> + <span id="hr-cost-know">100 Wiedzy</span></p>
+                        <button id="btn-buy-hr">ZATRUDNIJ REKRUTERA (+1 HR Pkt)</button>
+                    </div>
+
+                    <div class="hr-staff-panel">
+                        <div class="staff-card">
+                            <h4>Project Managers</h4>
+                            <p>Bonus: +10% Zysku / osoba</p>
+                            <p>Dostępnych: <span id="count-pm">0</span></p>
+                            <button class="btn-hire-staff" data-type="pm">Szkól (1 HR)</button>
+                        </div>
+                        <div class="staff-card">
+                            <h4>Optimization Spec.</h4>
+                            <p>Bonus: Zastępuje 2 Energii</p>
+                            <p>Dostępnych: <span id="count-opt">0</span></p>
+                            <button class="btn-hire-staff" data-type="opt">Szkól (3 HR)</button>
+                        </div>
+                        <div class="staff-card">
+                            <h4>Logistics Spec.</h4>
+                            <p>Bonus: +10% Prędkości (Koszt: +1 Energii)</p>
+                            <p>Dostępnych: <span id="count-log">0</span></p>
+                            <button class="btn-hire-staff" data-type="log">Szkól (2 HR)</button>
+                        </div>
+                    </div>
+
+                    <div class="headhunter-panel panel" style="margin-top: 20px; border-color: #ff5252;">
+                        <h3>Headhunting</h3>
+                        <p>Znajdź unikalnego talentu (Bonus +25% do konkretnej maszyny).</p>
+                        <button id="btn-headhunt">HEADHUNT (5 HR)</button>
+                        <div id="headhunter-result" style="margin-top: 10px; font-weight: bold;"></div>
+                    </div>
+                </div>
+
+            </main>
+
+            <aside>
+                <div class="panel prestige-panel">
+                    <h3>Restrukturyzacja</h3>
+                    <p>Obecny bonus: <span id="current-rep-bonus">+0% $ / +0% Wiedza</span></p>
+                    <p>Zysk: <span id="prestige-gain" style="color: #03dac6;">0</span> Rep</p>
+                    <button id="btn-prestige" disabled>RESTRUKTURYZACJA</button>
+                </div>
+
+                <div class="panel expansion-panel">
+                    <h3>Ekspansja</h3>
+                    <p>Cel: <span id="next-country-name">...</span></p>
+                    <p>Koszt: <span id="next-country-cost">...</span></p>
+                    <button id="btn-expansion" disabled>EKSPANSJA</button>
+                </div>
+
+                <div class="system-panel">
+                    <button id="save-btn">Zapisz</button>
+                    <button id="reset-btn" style="background:#cf6679;">Hard Reset</button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
