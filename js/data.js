@@ -1,17 +1,15 @@
 export const MACHINES_CONFIG = [
-    // --- TIER 1 (PODSTAWOWE - START) ---
+    // --- TIER 1 (PODSTAWOWE) ---
     { 
         id: "manual_press", name: "Ręczna Prasa", 
         baseCost: 0, baseProd: 10, baseTime: 2.0, unlockCost: 0, 
-        reqRes: null, reqContinent: null // DOSTĘPNA WSZĘDZIE
+        reqRes: null, reqContinent: null // Dostępna wszędzie (chyba że zastąpiona)
     },
-    // Wariant: Afryka (Egipt)
     { 
         id: "cobalt_cleaner", name: "Oczyszczarka Kobaltu", 
         baseCost: 500, baseProd: 35, baseTime: 1.8, unlockCost: 0, 
         reqRes: null, replaces: "manual_press", reqLoc: "egypt", reqContinent: "africa" 
     },
-    // Wariant: Europa (Polska) - Darmowy starter dla Europy!
     { 
         id: "coal_sorter", name: "Sortownia Węgla", 
         baseCost: 0, baseProd: 50, baseTime: 1.5, unlockCost: 0, 
@@ -22,28 +20,20 @@ export const MACHINES_CONFIG = [
     { 
         id: "conveyor_belt", name: "Taśmociąg", 
         baseCost: 100, baseProd: 60, baseTime: 4.0, unlockCost: 150, 
-        reqRes: null, reqContinent: null // DOSTĘPNA WSZĘDZIE
+        reqRes: null, reqContinent: null // Dostępna wszędzie
     },
-    // Wariant: Afryka (RPA)
     { 
         id: "wire_isolator", name: "Izolator Drutu", 
         baseCost: 2000, baseProd: 180, baseTime: 3.5, unlockCost: 0, 
         reqRes: null, replaces: "conveyor_belt", reqLoc: "rsa", reqContinent: "africa" 
-    },
-    // Wariant: Europa (Niemcy)
-    { 
-        id: "precision_belt", name: "Taśma Precyzyjna", 
-        baseCost: 5000, baseProd: 300, baseTime: 3.0, unlockCost: 0, 
-        reqRes: null, replaces: "conveyor_belt", reqLoc: "germany", reqContinent: "europe" 
     },
 
     // --- TIER 3 (PARA / ENERGIA) ---
     { 
         id: "steam_engine", name: "Silnik Parowy", 
         baseCost: 1000, baseProd: 400, baseTime: 8.0, unlockCost: 1200, 
-        reqRes: "thermo", reqContinent: null 
+        reqRes: "thermo", reqContinent: null // Dostępna wszędzie
     },
-    // Wariant: Europa (Polska) - Lepsza wersja silnika
     { 
         id: "coal_turbine", name: "Turbina Węglowa", 
         baseCost: 10000, baseProd: 1200, baseTime: 7.0, unlockCost: 0, 
@@ -56,7 +46,6 @@ export const MACHINES_CONFIG = [
         baseCost: 15000, baseProd: 2500, baseTime: 6.0, unlockCost: 10000, 
         reqRes: "electr", reqContinent: null 
     },
-    // Wariant: Europa (Niemcy)
     { 
         id: "precision_lathe", name: "Tokarka Precyzyjna", 
         baseCost: 50000, baseProd: 6000, baseTime: 5.5, unlockCost: 0, 
@@ -69,15 +58,14 @@ export const MACHINES_CONFIG = [
         baseCost: 150000, baseProd: 20000, baseTime: 12.0, unlockCost: 100000, 
         reqRes: "logistics", reqContinent: "america" 
     },
-    // Wariant: Europa (UK)
     { 
         id: "royal_assembly", name: "Królewska Manufaktura", 
         baseCost: 100000, baseProd: 25000, baseTime: 10.0, unlockCost: 0, 
         reqRes: "logistics", replaces: "assembly_line", reqLoc: "uk", reqContinent: "europe" 
     },
 
-    // --- DALSZE TIERY (AMERYKA/AZJA/KOSMOS) ---
-    {
+    // --- TIER 6+ (ZAAWANSOWANE) ---
+    { 
         id: "diesel_generator", name: "Agregat Przemysłowy", 
         baseCost: 500000, baseProd: 50000, baseTime: 10.0, unlockCost: 350000, 
         reqRes: "chemistry", reqContinent: "america" 
@@ -143,7 +131,6 @@ export const HR_CONFIG = [
 ];
 
 export const LOCATIONS = [
-    // PLANETA 1: ZIEMIA
     {
         id: "earth", name: "ZIEMIA",
         continents: [
@@ -158,49 +145,47 @@ export const LOCATIONS = [
             {
                 id: "europe", name: "Europa", desc: "Bogata, ale biurokratyczna (-1 Energii).", mods: { prod: 1.5, know: 1.2, energyMax: -1 },
                 countries: [
-                    { id: "poland", name: "Polska", mult: 10, reqCash: 1000000 }, // START EUROPY
+                    { id: "poland", name: "Polska", mult: 10, reqCash: 1000000 },
                     { id: "germany", name: "Niemcy", mult: 25, reqCash: 50000000 },
                     { id: "uk", name: "Wielka Brytania", mult: 50, reqCash: 500000000 }
                 ]
             },
             {
-                id: "america", name: "Ameryka Płn.", desc: "Kapitalizm (Produkcja x2, +1 Energii).", mods: { prod: 2.0, know: 1.0, energyMax: 1 },
+                id: "america", name: "Ameryka Płn.", desc: "Kapitalizm.", mods: { prod: 2.0, know: 1.0, energyMax: 1 },
                 countries: [
-                    { id: "usa", name: "USA", mult: 100, reqCash: 10000000000 }, 
+                    { id: "usa", name: "USA", mult: 100, reqCash: 10000000000 },
                     { id: "canada", name: "Kanada", mult: 150, reqCash: 500000000000 },
                     { id: "silicon_valley", name: "Dolina Krzemowa", mult: 300, reqCash: 1000000000000 }
                 ]
             },
             {
-                id: "asia", name: "Azja", desc: "Technologia (Wiedza x2, +2 Energii).", mods: { prod: 0.8, know: 2.0, energyMax: 2 },
+                id: "asia", name: "Azja", desc: "Technologia.", mods: { prod: 0.8, know: 2.0, energyMax: 2 },
                 countries: [
-                    { id: "china", name: "Chiny", mult: 500, reqCash: 10000000000000 }, 
+                    { id: "china", name: "Chiny", mult: 500, reqCash: 10000000000000 },
                     { id: "japan", name: "Japonia", mult: 800, reqCash: 500000000000000 },
                     { id: "singapore", name: "Singapur", mult: 1500, reqCash: 1000000000000000 }
                 ]
             }
         ]
     },
-    // PLANETA 2: KSIĘŻYC
     {
         id: "moon", name: "KSIĘŻYC",
         continents: [
             {
-                id: "moon_base", name: "Ciemna Strona", desc: "Cisza radiowa (Wiedza x3, -2 Energii).", mods: { prod: 1.0, know: 3.0, energyMax: -2 },
+                id: "moon_base", name: "Ciemna Strona", desc: "Cisza radiowa.", mods: { prod: 1.0, know: 3.0, energyMax: -2 },
                 countries: [
-                    { id: "iss_dock", name: "Orbital Dock", mult: 5000, reqCash: 10000000000000000 },
+                    { id: "iss_dock", name: "Orbital Dock", mult: 5000, reqCash: 1e16 },
                     { id: "tycho", name: "Krater Tycho", mult: 10000, reqCash: 5e16 },
                     { id: "armstrong", name: "Baza Armstrong", mult: 25000, reqCash: 1e17 }
                 ]
             }
         ]
     },
-    // PLANETA 3: MARS
     {
         id: "mars", name: "MARS",
         continents: [
             {
-                id: "mars_base", name: "Olympus Mons", desc: "Niska grawitacja (Produkcja x5).", mods: { prod: 5.0, know: 0.8, energyMax: 0 },
+                id: "mars_base", name: "Olympus Mons", desc: "Niska grawitacja.", mods: { prod: 5.0, know: 0.8, energyMax: 0 },
                 countries: [
                     { id: "curiosity", name: "Curiosity Site", mult: 50000, reqCash: 1e18 },
                     { id: "musk_city", name: "Colony One", mult: 100000, reqCash: 1e19 },
@@ -209,25 +194,23 @@ export const LOCATIONS = [
             }
         ]
     },
-    // PLANETA 4: WENUS
     {
         id: "venus", name: "WENUS",
         continents: [
             {
-                id: "venus_base", name: "Chmury Kwasowe", desc: "Ekstremalne warunki (Produkcja x10, -5 Energii).", mods: { prod: 10.0, know: 1.0, energyMax: -5 },
+                id: "venus_base", name: "Chmury Kwasowe", desc: "Ekstremalne warunki.", mods: { prod: 10.0, know: 1.0, energyMax: -5 },
                 countries: [
-                    { id: "sky_city", name: "Podniebne Miasto", mult: 1000000, reqCash: 1e22 }, 
+                    { id: "sky_city", name: "Podniebne Miasto", mult: 1000000, reqCash: 1e22 },
                     { id: "sulfur_mine", name: "Kopalnia Siarki", mult: 2500000, reqCash: 1e23 }
                 ]
             }
         ]
     },
-    // PLANETA 5: TYTAN
     {
         id: "titan", name: "TYTAN",
         continents: [
             {
-                id: "titan_base", name: "Metanowe Morze", desc: "Nieskończone paliwo (+20 Energii, Produkcja x50).", mods: { prod: 50.0, know: 5.0, energyMax: 20 },
+                id: "titan_base", name: "Metanowe Morze", desc: "Nieskończone paliwo.", mods: { prod: 50.0, know: 5.0, energyMax: 20 },
                 countries: [
                     { id: "methane_rig", name: "Platforma Wiertnicza", mult: 10000000, reqCash: 1e25 },
                     { id: "cryo_lab", name: "Lab. Kriogeniczne", mult: 50000000, reqCash: 1e26 }
