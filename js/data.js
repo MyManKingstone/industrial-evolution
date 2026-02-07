@@ -108,13 +108,14 @@ export const RESEARCH_CONFIG = [
     { id: "basic_physics", name: "Podstawy Fizyki", baseProd: 1, baseTime: 3.0, unlockCost: 0 },
     { id: "thermo", name: "Termodynamika", baseProd: 4, baseTime: 6.0, unlockCost: 500 },
     { id: "electr", name: "Elektryczność", baseProd: 10, baseTime: 10.0, unlockCost: 5000 },
-    { id: "logistics", name: "Logistyka Stosowana", baseProd: 25, baseTime: 12.0, unlockCost: 25000 },
-    { id: "chemistry", name: "Chemia Przemysłowa", baseProd: 60, baseTime: 15.0, unlockCost: 100000 },
-    { id: "computing", name: "Informatyka", baseProd: 150, baseTime: 8.0, unlockCost: 500000 },
-    { id: "robotics", name: "Robotyka", baseProd: 400, baseTime: 18.0, unlockCost: 2000000 },
-    { id: "ai_systems", name: "Systemy AI", baseProd: 1000, baseTime: 25.0, unlockCost: 10000000 },
-    { id: "nanotech", name: "Nanotechnologia", baseProd: 2500, baseTime: 30.0, unlockCost: 50000000 },
-    { id: "quantum", name: "Fizyka Kwantowa", baseProd: 10000, baseTime: 60.0, unlockCost: 200000000 }
+    // Zwiększone czasy dla mid/late game
+    { id: "logistics", name: "Logistyka Stosowana", baseProd: 25, baseTime: 15.0, unlockCost: 25000 },
+    { id: "chemistry", name: "Chemia Przemysłowa", baseProd: 60, baseTime: 20.0, unlockCost: 100000 },
+    { id: "computing", name: "Informatyka", baseProd: 150, baseTime: 15.0, unlockCost: 500000 },
+    { id: "robotics", name: "Robotyka", baseProd: 400, baseTime: 30.0, unlockCost: 2000000 },
+    { id: "ai_systems", name: "Systemy AI", baseProd: 1000, baseTime: 45.0, unlockCost: 10000000 },
+    { id: "nanotech", name: "Nanotechnologia", baseProd: 2500, baseTime: 60.0, unlockCost: 50000000 },
+    { id: "quantum", name: "Fizyka Kwantowa", baseProd: 10000, baseTime: 120.0, unlockCost: 200000000 }
 ];
 
 export const UPGRADES_CONFIG = [
@@ -130,13 +131,12 @@ export const HR_CONFIG = [
     { id: "log", name: "Logistics Spec.", cost: 2, desc: "+10% Prędkości, +1 Koszt Energii" }
 ];
 
-// --- MAPA ---
 export const LOCATIONS = [
     {
-        id: "earth", name: "ZIEMIA", reqCash: 0, // Ziemia jest darmowa (start)
+        id: "earth", name: "ZIEMIA", reqCash: 0,
         continents: [
             {
-                id: "africa", name: "Afryka", reqCash: 0, // Afryka jest darmowa (start)
+                id: "africa", name: "Afryka", reqCash: 0,
                 desc: "Start.", mods: { prod: 1.0, know: 1.0, energyMax: 0 },
                 countries: [
                     { id: "congo", name: "Kongo", mult: 1, reqCash: 0 },
@@ -145,7 +145,7 @@ export const LOCATIONS = [
                 ]
             },
             {
-                id: "europe", name: "Europa", reqCash: 1000000, // <--- CENA WEJŚCIA: 1M
+                id: "europe", name: "Europa", reqCash: 1000000,
                 desc: "Bogata, ale biurokratyczna (-1 Energii).", mods: { prod: 1.5, know: 1.2, energyMax: -1 },
                 countries: [
                     { id: "poland", name: "Polska", mult: 10, reqCash: 1000000 },
@@ -154,7 +154,7 @@ export const LOCATIONS = [
                 ]
             },
             {
-                id: "america", name: "Ameryka Płn.", reqCash: 10000000000, // <--- CENA: 10B
+                id: "america", name: "Ameryka Płn.", reqCash: 10000000000,
                 desc: "Kapitalizm.", mods: { prod: 2.0, know: 1.0, energyMax: 1 },
                 countries: [
                     { id: "usa", name: "USA", mult: 100, reqCash: 10000000000 },
@@ -163,7 +163,7 @@ export const LOCATIONS = [
                 ]
             },
             {
-                id: "asia", name: "Azja", reqCash: 10000000000000, // <--- CENA: 10T
+                id: "asia", name: "Azja", reqCash: 10000000000000,
                 desc: "Technologia.", mods: { prod: 0.8, know: 2.0, energyMax: 2 },
                 countries: [
                     { id: "china", name: "Chiny", mult: 500, reqCash: 10000000000000 },
@@ -174,10 +174,10 @@ export const LOCATIONS = [
         ]
     },
     {
-        id: "moon", name: "KSIĘŻYC", reqCash: 10000000000000000, // <--- CENA: 10Q (1e16)
+        id: "moon", name: "KSIĘŻYC", reqCash: 10000000000000000,
         continents: [
             {
-                id: "moon_base", name: "Ciemna Strona", reqCash: 10000000000000000, // <--- CENA TEŻ TUTAJ
+                id: "moon_base", name: "Ciemna Strona", reqCash: 10000000000000000,
                 desc: "Cisza radiowa.", mods: { prod: 1.0, know: 3.0, energyMax: -2 },
                 countries: [
                     { id: "iss_dock", name: "Orbital Dock", mult: 5000, reqCash: 10000000000000000 },
@@ -188,10 +188,10 @@ export const LOCATIONS = [
         ]
     },
     {
-        id: "mars", name: "MARS", reqCash: 1e18, // <--- CENA
+        id: "mars", name: "MARS", reqCash: 1e18,
         continents: [
             {
-                id: "mars_base", name: "Olympus Mons", reqCash: 1e18, // <--- CENA
+                id: "mars_base", name: "Olympus Mons", reqCash: 1e18,
                 desc: "Niska grawitacja.", mods: { prod: 5.0, know: 0.8, energyMax: 0 },
                 countries: [
                     { id: "curiosity", name: "Curiosity Site", mult: 50000, reqCash: 1e18 },
@@ -202,7 +202,7 @@ export const LOCATIONS = [
         ]
     },
     {
-        id: "venus", name: "WENUS", reqCash: 1e22, // <--- CENA
+        id: "venus", name: "WENUS", reqCash: 1e22,
         continents: [
             {
                 id: "venus_base", name: "Chmury Kwasowe", reqCash: 1e22,
@@ -215,7 +215,7 @@ export const LOCATIONS = [
         ]
     },
     {
-        id: "titan", name: "TYTAN", reqCash: 1e25, // <--- CENA
+        id: "titan", name: "TYTAN", reqCash: 1e25,
         continents: [
             {
                 id: "titan_base", name: "Metanowe Morze", reqCash: 1e25,

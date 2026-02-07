@@ -97,6 +97,30 @@ export function getGlobalProductionRates() {
     return { money: moneyPerSec, knowledge: knowPerSec };
 }
 
+// NOWA FUNKCJA: Do panelu statystyk (wyświetla łączne mnożniki)
+export function getGlobalMultipliers() {
+    const { country } = getCurrentLocation();
+    const contMods = getContinentModifiers();
+    const repMultMoney = 1 + (gameState.resources.reputation * 0.1); 
+    const repMultKnow = 1 + (gameState.resources.reputation * 0.05);
+    
+    const prodUpgrade = getUpgradeMultiplier('production_mult');
+    const speedUpgrade = getUpgradeMultiplier('speed_mult');
+    const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
+
+    const totalMoneyMult = country.mult * contMods.prod * repMultMoney * prodUpgrade.multiplier;
+    const totalSpeedMult = speedUpgrade.multiplier * contMods.speedMult;
+    const totalKnowMult = contMods.know * knowUpgrade.multiplier * repMultKnow;
+
+    return {
+        money: totalMoneyMult,
+        speed: totalSpeedMult,
+        knowledge: totalKnowMult,
+        repMoney: repMultMoney,
+        repKnow: repMultKnow
+    };
+}
+
 // --- HELPERS: UPGRADES & HR ---
 
 export function getUpgradeCost(upgradeId) {
@@ -168,6 +192,7 @@ export function doHeadhunt() {
 // --- GAME LOOP ---
 
 export function updateGame(deltaTime) {
+    // Te zmienne są używane wewnątrz pętli, ale wyliczamy je raz dla wydajności
     const speedUpgrade = getUpgradeMultiplier('speed_mult');
     const contMods = getContinentModifiers();
     const globalSpeedMult = speedUpgrade.multiplier * contMods.speedMult;
@@ -355,17 +380,17 @@ export function assignStaff(machineId, type, amount) {
 }
 
 export function equipSpecialist(machineId, specId) {
-    if (specId === "") {
-        gameState.machineSpecialists[machineId] = null;
-    } else {
-        gameState.machineSpecialists[machineId] = parseInt(specId);
-    }
+    if (specId === "") gameState.machineSpecialists[machineId] = null;
+    else gameState.machineSpecialists[machineId] = parseInt(specId);
 }
 
+// ZMIANA: Szybsze skalowanie prestiżu (dzielnik 100 zamiast 1000)
 export function calculatePrestigeGain() {
     const earnings = gameState.stats.runEarnings;
     if (earnings < 1000) return 0;
-    return Math.floor(Math.cbrt(earnings / 1000));
+    // Było: Math.cbrt(earnings / 1000)
+    // Jest: Math.cbrt(earnings / 100) -> 2.15x więcej punktów
+    return Math.floor(Math.cbrt(earnings / 100));
 }
 
 export function doRestructuring() {
@@ -407,7 +432,5 @@ export function doExpansion() {
     if (next.type === 'continent') msg = `NOWY KONTYNENT: ${next.target.name} (Reset Kraju)`;
     if (next.type === 'planet') msg = `KOLONIZACJA: ${next.target.name} (HARD RESET)`;
 
-    if (confirm(msg)) {
-        applyPrestigeReset(next.type);
-    }
+    if (confirm(msg)) applyPrestigeReset(next.type);
 }

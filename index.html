@@ -22,6 +22,8 @@
         </div>
     </div>
 
+    <div id="save-toast">Gra zapisana 💾</div>
+
     <div class="container">
         <header>
             <div class="header-top">
@@ -97,6 +99,13 @@
                         <button id="btn-headhunt">HEADHUNT</button>
                         <div id="headhunter-result" style="margin-top: 10px; font-weight: bold; color: #ff5252;"></div>
                     </div>
+
+                    <div class="panel" style="margin-top: 20px;">
+                        <h3>Zatrudnieni Specjaliści</h3>
+                        <div id="hr-roster" style="display: flex; flex-direction: column; gap: 5px;">
+                            <span style="color:#aaa; font-style:italic;">Brak specjalistów.</span>
+                        </div>
+                    </div>
                 </div>
 
             </main>
@@ -132,6 +141,15 @@
                     <button id="btn-expansion" disabled>EKSPANSJA</button>
                 </div>
 
+                <div class="panel stats-panel" style="margin-top: 10px; font-size: 0.85em;">
+                    <h3>Globalne Statystyki</h3>
+                    <ul style="list-style: none; padding: 0; line-height: 1.6;">
+                        <li>Zysk: <span id="stat-money-mult" style="color:#ffca28; float:right;">x1.0</span></li>
+                        <li>Wiedza: <span id="stat-know-mult" style="color:#64b5f6; float:right;">x1.0</span></li>
+                        <li>Prędkość: <span id="stat-speed-mult" style="color:#66bb6a; float:right;">x1.0</span></li>
+                    </ul>
+                </div>
+
                 <div class="system-panel">
                     <button id="save-btn">Zapisz</button>
                     <button id="reset-btn" style="background:#cf6679;">Hard Reset</button>
@@ -139,10 +157,6 @@
             </aside>
         </div>
     </div>
-
-    <script type="module" src="js/main.js"></script>
-    
-<div id="save-toast">Gra zapisana 💾</div>
 
     <script type="module" src="js/main.js"></script>
 </body>

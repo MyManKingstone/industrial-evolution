@@ -1,6 +1,6 @@
 import { gameState } from './state.js';
 import { MACHINES_CONFIG, RESEARCH_CONFIG, UPGRADES_CONFIG } from './data.js';
-import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock, getUpgradeMultiplier, getGlobalProductionRates } from './game.js';
+import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock, getUpgradeMultiplier, getGlobalProductionRates, getGlobalMultipliers } from './game.js';
 
 // --- DOM ELEMENTS ---
 const els = {
@@ -14,7 +14,7 @@ const els = {
     researchList: document.getElementById('research-list'),
     upgradesList: document.getElementById('upgrades-list'),
     countryDisplay: document.getElementById('country-display'),
-    locationMods: document.getElementById('location-mods'), // NOWY ELEMENT
+    locationMods: document.getElementById('location-mods'),
     prestigeGain: document.getElementById('prestige-gain'),
     btnExpansion: document.getElementById('btn-expansion'),
     countPm: document.getElementById('count-pm'),
@@ -28,10 +28,15 @@ const els = {
     repBonusMoneyCurr: document.getElementById('rep-bonus-money-curr'),
     repBonusKnowCurr: document.getElementById('rep-bonus-know-curr'),
     repBonusMoneyNext: document.getElementById('rep-bonus-money-next'),
-    repBonusKnowNext: document.getElementById('rep-bonus-know-next')
+    repBonusKnowNext: document.getElementById('rep-bonus-know-next'),
+    hrRoster: document.getElementById('hr-roster'), 
+    // Statystyki
+    statMoneyMult: document.getElementById('stat-money-mult'),
+    statKnowMult: document.getElementById('stat-know-mult'),
+    statSpeedMult: document.getElementById('stat-speed-mult')
 };
 
-// --- HOLD TO BUY LOGIC ---
+// --- UNIVERSAL HOLD TO BUY LOGIC ---
 let holdTimer = null;
 let repeatTimeout = null;
 let currentHoldSpeed = 200;
@@ -44,11 +49,12 @@ function stopHolding() {
     currentHoldSpeed = 200;
 }
 
-function startHolding(id, amount) {
-    modifyEnergy(id, amount);
+// Funkcja przyjmuje teraz dowolną akcję (callback)
+function startHolding(actionFn) {
+    actionFn(); // Wykonaj raz od razu
     holdTimer = setTimeout(() => {
         const loop = () => {
-            modifyEnergy(id, amount);
+            actionFn(); // Powtarzaj
             currentHoldSpeed = Math.max(30, currentHoldSpeed * 0.85); 
             repeatTimeout = setTimeout(loop, currentHoldSpeed);
         };
@@ -63,7 +69,6 @@ export function initUI() {
     } else {
         if(els.tutorialModal) els.tutorialModal.style.display = 'none';
     }
-    
     if(els.closeTutorialBtn) {
         els.closeTutorialBtn.addEventListener('click', () => {
             els.tutorialModal.style.display = 'none';
@@ -85,12 +90,25 @@ export function initUI() {
     renderListStructure(els.researchList, RESEARCH_CONFIG, 'research');
     renderUpgradesList();
 
+    // --- GENERIC MOUSE HANDLERS (HOLD TO BUY) ---
     const handleStart = (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
-        if (btn.classList.contains('btn-plus')) { e.preventDefault(); startHolding(btn.dataset.id, 1); }
-        else if (btn.classList.contains('btn-minus')) { e.preventDefault(); startHolding(btn.dataset.id, -1); }
+
+        // 1. Energia +/-
+        if (btn.classList.contains('btn-plus')) { e.preventDefault(); startHolding(() => modifyEnergy(btn.dataset.id, 1)); }
+        else if (btn.classList.contains('btn-minus')) { e.preventDefault(); startHolding(() => modifyEnergy(btn.dataset.id, -1)); }
+        
+        // 2. Punkty HR
+        else if (btn.id === 'btn-buy-hr') { e.preventDefault(); startHolding(() => { buyHrPoint(); updateUI(); }); }
+        
+        // 3. Max Energia
+        else if (btn.id === 'btn-buy-energy') { e.preventDefault(); startHolding(() => { buyMaxEnergy(); updateUI(); }); }
+        
+        // 4. Kupowanie Ulepszeń
+        else if (btn.classList.contains('btn-buy-upgrade')) { e.preventDefault(); startHolding(() => { buyUpgrade(btn.dataset.id); updateUI(); }); }
     };
+    
     const handleEnd = () => stopHolding();
 
     document.addEventListener('mousedown', handleStart);
@@ -99,34 +117,30 @@ export function initUI() {
     document.addEventListener('touchstart', handleStart, { passive: false });
     document.addEventListener('touchend', handleEnd);
 
+    // --- CLICK HANDLERS (Pojedyncze akcje) ---
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
         const id = btn.dataset.id;
         
-        if (btn.classList.contains('btn-plus') || btn.classList.contains('btn-minus')) return;
+        // Ignoruj te obsłużone przez hold-to-buy
+        if (btn.classList.contains('btn-plus') || 
+            btn.classList.contains('btn-minus') || 
+            btn.id === 'btn-buy-hr' || 
+            btn.id === 'btn-buy-energy' ||
+            btn.classList.contains('btn-buy-upgrade')) return;
 
-        if (btn.classList.contains('btn-unlock-machine')) { 
-            unlockItem(id, 'machine'); 
-            forceRebuildControls(id, 'machine'); 
-            updateUI(); 
-        }
-        else if (btn.classList.contains('btn-unlock-research')) { 
-            unlockItem(id, 'research'); 
-            forceRebuildControls(id, 'research'); 
-            updateUI(); 
-        } 
-        else if (btn.classList.contains('btn-buy-upgrade')) { buyUpgrade(id); updateUI(); }
-        else if (btn.id === 'btn-buy-hr') { buyHrPoint(); updateUI(); }
+        if (btn.classList.contains('btn-unlock-machine')) { unlockItem(id, 'machine'); forceRebuildControls(id, 'machine'); updateUI(); }
+        else if (btn.classList.contains('btn-unlock-research')) { unlockItem(id, 'research'); forceRebuildControls(id, 'research'); updateUI(); } 
         else if (btn.id === 'btn-headhunt') { 
             const res = doHeadhunt(); 
             if(els.headhuntResult) els.headhuntResult.textContent = res; 
             updateUI(); 
+            renderHeadhunterList(); // Odśwież listę po rekrutacji
         }
         else if (btn.classList.contains('btn-assign-hr')) { assignStaff(id, btn.dataset.type, 1); updateUI(); }
     });
 
-    if(document.getElementById('btn-buy-energy')) document.getElementById('btn-buy-energy').addEventListener('click', () => { buyMaxEnergy(); updateUI(); });
     if(document.getElementById('btn-prestige')) document.getElementById('btn-prestige').addEventListener('click', doRestructuring);
     if(els.btnExpansion) els.btnExpansion.addEventListener('click', doExpansion);
 
@@ -138,6 +152,7 @@ export function initUI() {
     });
     
     updateUI();
+    renderHeadhunterList(); // Pierwsze renderowanie listy HR
 }
 
 // --- RENDER FUNCTIONS ---
@@ -213,6 +228,27 @@ function renderUpgradesList() {
             <button class="btn-buy-upgrade" data-id="${up.id}">Kup (<span id="cost-${up.id}">${up.baseCost}</span>)</button>
         `;
         els.upgradesList.appendChild(div);
+    });
+}
+
+function renderHeadhunterList() {
+    if (!els.hrRoster) return;
+    els.hrRoster.innerHTML = '';
+    
+    if (gameState.headhunters.length === 0) {
+        els.hrRoster.innerHTML = '<span style="color:#aaa; font-style:italic;">Brak specjalistów.</span>';
+        return;
+    }
+
+    gameState.headhunters.forEach(h => {
+        const targetMachine = MACHINES_CONFIG.find(m => m.id === h.targetId)?.name || "Nieznana";
+        const div = document.createElement('div');
+        div.style.background = '#333';
+        div.style.padding = '5px';
+        div.style.borderLeft = '3px solid #ff5252';
+        div.style.fontSize = '0.9em';
+        div.innerHTML = `<strong>${h.name}</strong> <br> Specjalizacja: ${targetMachine} <br> <span style="color: #4caf50;">+${(h.bonus * 100).toFixed(0)}% Produkcji</span>`;
+        els.hrRoster.appendChild(div);
     });
 }
 
@@ -293,6 +329,7 @@ export function showSaveToast() {
 
 // --- MAIN UPDATE LOOP ---
 export function updateUI() {
+    // 1. ZASOBY
     if(els.money) els.money.textContent = `$${formatNumber(gameState.resources.money)}`;
     if(els.know) els.know.textContent = Math.floor(gameState.resources.knowledge);
     if(els.hr) els.hr.textContent = Math.floor(gameState.resources.hrPoints);
@@ -310,6 +347,13 @@ export function updateUI() {
     if(els.moneyRate) els.moneyRate.textContent = `(+$${formatNumber(rates.money)}/s)`;
     if(els.knowRate) els.knowRate.textContent = `(+${formatNumber(rates.knowledge)}/s)`;
 
+    // 2. STATS PANEL (NOWY)
+    const mults = getGlobalMultipliers();
+    if(els.statMoneyMult) els.statMoneyMult.textContent = `x${formatNumber(mults.money)}`;
+    if(els.statKnowMult) els.statKnowMult.textContent = `x${formatNumber(mults.knowledge)}`;
+    if(els.statSpeedMult) els.statSpeedMult.textContent = `x${mults.speed.toFixed(2)}`;
+
+    // 3. PRESTIGE
     if(els.rep) els.rep.textContent = Math.floor(gameState.resources.reputation);
     
     const currRep = gameState.resources.reputation;
@@ -328,32 +372,28 @@ export function updateUI() {
         bonusBtn.style.opacity = gain > 0 ? "1" : "0.5";
     }
 
+    // 4. LOCATION
     const loc = getCurrentLocation();
     if(els.countryDisplay && loc.country) {
         els.countryDisplay.textContent = `[${loc.planet.name}] ${loc.country.name}`;
     }
 
-    // --- NOWY FRAGMENT: WYPEŁNIANIE BONUSÓW LOKALNYCH ---
     if (els.locationMods && loc.country) {
         const cMods = loc.continent.mods || {};
         let info = [];
-
-        // Bonus Kraju
         info.push(`Zysk: x${loc.country.mult}`);
-
-        // Bonusy Kontynentu
         if (cMods.prod && cMods.prod !== 1.0) info.push(`Region Prod: x${cMods.prod}`);
         if (cMods.know && cMods.know !== 1.0) info.push(`Wiedza: x${cMods.know}`);
         if (cMods.energyMax && cMods.energyMax !== 0) info.push(`Max Moc: ${cMods.energyMax > 0 ? '+' : ''}${cMods.energyMax}`);
         if (cMods.speedMult && cMods.speedMult !== 1.0) info.push(`Prędkość: x${cMods.speedMult}`);
-
         els.locationMods.textContent = info.join(' | ');
     }
-    // ----------------------------------------------------
 
+    // 5. RENDER LISTS
     updateListUI(MACHINES_CONFIG, 'machine');
     updateListUI(RESEARCH_CONFIG, 'research');
 
+    // 6. UPGRADES
     UPGRADES_CONFIG.forEach(up => {
         const currentLvl = gameState.upgrades[up.id] || 0;
         const currentCost = getUpgradeCost(up.id);
@@ -366,6 +406,7 @@ export function updateUI() {
         if(btn) btn.disabled = gameState.resources.knowledge < currentCost || currentLvl >= up.maxLevel;
     });
 
+    // 7. EXPANSION & HR
     if(els.countPm) els.countPm.textContent = gameState.employees.pm;
     if(els.countOpt) els.countOpt.textContent = gameState.employees.opt;
     if(els.countLog) els.countLog.textContent = gameState.employees.log;
@@ -407,7 +448,7 @@ function updateListUI(configArray, type) {
                     candidates.forEach(cand => {
                         const opt = document.createElement('option');
                         opt.value = cand.id;
-                        opt.textContent = `${cand.name} (+${(cand.bonus*100).toFixed(0)}%)`;
+                        opt.textContent = `${cand.name} (+${(cand.bonus*100).toFixed(0)}% Prod)`;
                         select.appendChild(opt);
                     });
                     if (gameState.machineSpecialists[config.id]) {
