@@ -162,3 +162,59 @@ button:disabled { opacity: 0.3; cursor: not-allowed; }
 .text-pm { color: #ffca28; }
 .text-opt { color: #42a5f5; }
 .text-log { color: #66bb6a; }
+
+/* SIDEBAR UPGRADES */
+.upgrades-grid-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.upgrades-grid-sidebar .upgrade-card {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    padding: 8px;
+    font-size: 0.9em;
+}
+.upgrades-grid-sidebar h4 { font-size: 0.95em; margin-bottom: 3px; }
+.upgrades-grid-sidebar .upgrade-desc { font-size: 0.8em; margin-bottom: 5px; color: #bbb; }
+
+/* MODAL TUTORIAL */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: #1e1e1e; padding: 30px; border: 2px solid #ff9800;
+    max-width: 500px; color: #fff; text-align: left;
+}
+.modal-content h2 { color: #ff9800; margin-top: 0; }
+.modal-content ul { line-height: 1.6; }
+.modal-content button {
+    background: #ff9800; color: #000; font-weight: bold; border: none;
+    padding: 10px 20px; font-size: 1.1em; margin-top: 20px; width: 100%; cursor: pointer;
+}
+.modal-content button:hover { background: #ffa726; }
+
+/* SAVE TOAST */
+#save-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(76, 175, 80, 0.9); /* Zielony */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none; /* Żeby nie blokował klikania */
+    z-index: 9999;
+}
+
+#save-toast.show {
+    opacity: 1;
+}

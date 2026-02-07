@@ -1,6 +1,6 @@
 import { loadGame, saveGame, resetSave, gameState } from './state.js';
 import { updateGame } from './game.js';
-import { initUI, updateUI } from './ui.js';
+import { initUI, updateUI, showSaveToast } from './ui.js'; // Dodano import showSaveToast
 
 // Setup
 try {
@@ -8,36 +8,47 @@ try {
     initUI();
 } catch (e) {
     console.error("CRITICAL ERROR IN INIT:", e);
-    // Awaryjne czyszczenie jeśli initUI padnie przez złe dane
-    localStorage.clear();
-    location.reload();
 }
 
-// Obsługa przycisków globalnych
+// Global Buttons
 const saveBtn = document.getElementById('save-btn');
 const resetBtn = document.getElementById('reset-btn');
 
-if (saveBtn) saveBtn.addEventListener('click', saveGame);
+if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+        saveGame();
+        showSaveToast(); // Pokaż dymek przy ręcznym zapisie
+    });
+}
 if (resetBtn) resetBtn.addEventListener('click', resetSave);
 
-// Auto-Save
-setInterval(saveGame, 10000);
+// --- AUTO SAVE SYSTEM ---
 
-// GAME LOOP
+// 1. Zapisuj co 30 sekund (rzadziej, żeby nie spamować dymkiem)
+setInterval(() => {
+    saveGame();
+    showSaveToast();
+}, 30000);
+
+// 2. Zapisuj ZAWSZE przy zamykaniu karty/odświeżaniu
+window.addEventListener('beforeunload', () => {
+    saveGame();
+});
+
+// --- GAME LOOP ---
 let lastTime = performance.now();
 
 function loop(currentTime) {
     const deltaTime = (currentTime - lastTime) / 1000; 
     lastTime = currentTime;
 
-    // Bezpieczne wywołanie logiki gry
     try {
         if(gameState) {
             updateGame(deltaTime);
             updateUI();
         }
     } catch (e) {
-        console.error("GAME LOOP ERROR:", e);
+        console.error("LOOP ERROR:", e);
     }
 
     requestAnimationFrame(loop);
