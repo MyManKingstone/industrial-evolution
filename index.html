@@ -8,6 +8,20 @@
 </head>
 <body>
 
+    <div id="tutorial-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Witaj w Industrial Evolution! 🏭</h2>
+            <p>Twoim celem jest zbudowanie imperium przemysłowego sięgającego gwiazd.</p>
+            <ul>
+                <li>⚡ <strong>Energia:</strong> Maszyny nie działają same. Przydziel im MOC (przyciski +/-).</li>
+                <li>💰 <strong>Zysk:</strong> Zarabiaj, kupuj nowe maszyny i ulepszaj je.</li>
+                <li>🔬 <strong>Badania:</strong> W zakładce Laboratorium generuj Wiedzę, by kupować stałe ulepszenia.</li>
+                <li>🌍 <strong>Podróż:</strong> Gdy osiągniesz limit, przenieś się do nowego kraju (Ekspansja).</li>
+            </ul>
+            <button id="close-tutorial">Zrozumiałem, do roboty!</button>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <div class="header-top">
@@ -30,7 +44,7 @@
         <nav class="tabs">
             <button class="tab-btn active" data-tab="production">FABRYKA</button>
             <button class="tab-btn" data-tab="research">LABORATORIUM</button>
-            <button class="tab-btn" data-tab="hr">DZIAŁ KADR (HR)</button>
+            <button class="tab-btn" data-tab="hr">DZIAŁ KADR</button>
         </nav>
 
         <div class="game-layout">
@@ -44,8 +58,6 @@
                 <div id="tab-research" class="tab-content" style="display: none;">
                     <h2>Projekty Badawcze</h2>
                     <div id="research-list"></div>
-                    <h2 style="margin-top: 30px; border-top: 1px solid #333; padding-top: 10px;">Technologie</h2>
-                    <div id="upgrades-list" class="upgrades-grid"></div>
                 </div>
 
                 <div id="tab-hr" class="tab-content" style="display: none;">
@@ -55,45 +67,39 @@
                         <h3>Rekrutacja</h3>
                         <p>Wymień zasoby na Punkty HR.</p>
                         <p>Koszt: <span id="hr-cost-money">$10k</span> + <span id="hr-cost-know">100 Wiedzy</span></p>
-                        <button id="btn-buy-hr">ZATRUDNIJ REKRUTERA (+1 HR Pkt)</button>
+                        <button id="btn-buy-hr">REKRUTUJ (+1 HR Pkt)</button>
                     </div>
 
-                    <div class="hr-staff-panel">
-                        <div class="staff-card">
-                            <h4>Project Managers</h4>
-                            <p>Bonus: +10% Zysku / osoba</p>
-                            <p>Dostępnych: <span id="count-pm">0</span></p>
-                            <button class="btn-hire-staff" data-type="pm">Szkól (1 HR)</button>
-                        </div>
-                        <div class="staff-card">
-                            <h4>Optimization Spec.</h4>
-                            <p>Bonus: Zastępuje 2 Energii</p>
-                            <p>Dostępnych: <span id="count-opt">0</span></p>
-                            <button class="btn-hire-staff" data-type="opt">Szkól (3 HR)</button>
-                        </div>
-                        <div class="staff-card">
-                            <h4>Logistics Spec.</h4>
-                            <p>Bonus: +10% Prędkości (Koszt: +1 Energii)</p>
-                            <p>Dostępnych: <span id="count-log">0</span></p>
-                            <button class="btn-hire-staff" data-type="log">Szkól (2 HR)</button>
-                        </div>
+                    <div class="hr-info-panel panel">
+                        <h3>Dostępne Stanowiska</h3>
+                        <p style="font-size: 0.9em; color:#aaa;">(Przypisz pracowników bezpośrednio w panelu maszyny)</p>
+                        <ul style="list-style: none; padding: 0;">
+                            <li><strong style="color:#ffca28">Project Manager (1 HR):</strong> +10% Zysku</li>
+                            <li><strong style="color:#42a5f5">Optymalizator (3 HR):</strong> Darmowa energia</li>
+                            <li><strong style="color:#66bb6a">Logistyk (2 HR):</strong> +10% Prędkości</li>
+                        </ul>
                     </div>
 
                     <div class="headhunter-panel panel" style="margin-top: 20px; border-color: #ff5252;">
                         <h3>Headhunting</h3>
-                        <p>Znajdź unikalnego talentu (Bonus +25% do konkretnej maszyny).</p>
-                        <button id="btn-headhunt">HEADHUNT (5 HR)</button>
-                        <div id="headhunter-result" style="margin-top: 10px; font-weight: bold;"></div>
+                        <p>Losuj unikalnego specjalistę (5 HR).</p>
+                        <button id="btn-headhunt">HEADHUNT</button>
+                        <div id="headhunter-result" style="margin-top: 10px; font-weight: bold; color: #ff5252;"></div>
                     </div>
                 </div>
 
             </main>
 
             <aside>
+                <div class="panel upgrades-panel">
+                    <h3>Technologie i Ulepszenia</h3>
+                    <div id="upgrades-list" class="upgrades-grid-sidebar"></div>
+                </div>
+
                 <div class="panel prestige-panel">
                     <h3>Restrukturyzacja</h3>
-                    <p>Obecny bonus: <span id="current-rep-bonus">+0% $ / +0% Wiedza</span></p>
-                    <p>Zysk: <span id="prestige-gain" style="color: #03dac6;">0</span> Rep</p>
+                    <p>Bonus Reputacji: <span id="current-rep-bonus" style="color:#bb86fc">+0%</span></p>
+                    <p>Zysk przy reset: <span id="prestige-gain" style="color: #03dac6;">0</span> Rep</p>
                     <button id="btn-prestige" disabled>RESTRUKTURYZACJA</button>
                 </div>
 

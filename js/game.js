@@ -24,49 +24,34 @@ function getContinentModifiers() {
     };
 }
 
-// --- LOGIKA DOSTĘPNOŚCI (REGION LOCK) ---
+// --- CORE: MATEMATYKA ---
 
-export function isMachineAvailableInLoc(machineConfig) {
-    const { continent, country } = getCurrentLocation();
+// Funkcja zwracająca rzeczywisty przychód maszyny na jeden cykl (uwzględniając wszystko)
+export function getRealMachineProduction(machineId) {
+    const config = MACHINES_CONFIG.find(m => m.id === machineId);
+    const state = gameState.machines[machineId];
+    if (!config || !state) return 0;
 
-    // 1. Sprawdź Kontynent
-    if (machineConfig.reqContinent && machineConfig.reqContinent !== continent.id) {
-        return false; // Ukryj, jeśli jesteś na złym kontynencie
-    }
+    const { country } = getCurrentLocation();
+    const contMods = getContinentModifiers();
+    const repMult = 1 + (gameState.resources.reputation * 0.1); 
+    const prodUpgrade = getUpgradeMultiplier('production_mult');
+    
+    // HR Bonus
+    const hr = getHRBonuses(machineId);
 
-    // 2. Sprawdź Kraj (jeśli wymagany)
-    // Jeśli maszyna wymaga Egiptu, a jesteś w Kongo -> Ukryj
-    // ALE jeśli już ją odblokowałeś w Egipcie i pojechałeś do RPA -> Pokaż
-    const isUnlocked = gameState.machines[machineConfig.id]?.unlocked;
-    if (machineConfig.reqLoc && country.id !== machineConfig.reqLoc && !isUnlocked) {
-        return false;
-    }
+    // Baza * Level * Kraj * Kontynent * Reputacja * Ulepszenia * HR
+    let production = config.baseProd * state.level;
+    production *= country.mult;
+    production *= contMods.prod;
+    production *= repMult;
+    production *= prodUpgrade.multiplier;
+    production *= hr.prodMult;
 
-    return true;
+    return production;
 }
 
-export function isMachineReplaced(machineId) {
-    const replacement = MACHINES_CONFIG.find(m => m.replaces === machineId);
-    if (replacement) {
-        // Czy replacement jest dostępny w tej lokacji?
-        if (!isMachineAvailableInLoc(replacement)) return false;
-
-        const replacementState = gameState.machines[replacement.id];
-        // Jeśli replacement jest odblokowany -> stara znika
-        if (replacementState && replacementState.unlocked) return true;
-        
-        // Opcja: Ukrywamy starą nawet jak nowa jest tylko "do kupienia" w tym kraju?
-        // Tak, jeśli jesteś w Polsce, "Silnik Parowy" powinien zniknąć na rzecz "Turbiny",
-        // nawet jak jeszcze nie kupiłeś Turbiny (żeby nie kupować starego szrotu).
-        if (replacement.reqLoc) {
-            const { country } = getCurrentLocation();
-            if (country.id === replacement.reqLoc) return true;
-        }
-    }
-    return false;
-}
-
-// --- POZOSTAŁE FUNKCJE ---
+// --- POZOSTAŁE HELPERSY ---
 
 export function getUpgradeCost(upgradeId) {
     const config = UPGRADES_CONFIG.find(u => u.id === upgradeId);
@@ -132,27 +117,23 @@ export function doHeadhunt() {
     return `Zrekrutowano: ${newSpec.name} dla: ${target.name}!`;
 }
 
+// --- GAME LOOP ---
+
 export function updateGame(deltaTime) {
-    const { country } = getCurrentLocation();
-    const contMods = getContinentModifiers();
-    const repMult = 1 + (gameState.resources.reputation * 0.1); 
-    const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
-    
-    const prodUpgrade = getUpgradeMultiplier('production_mult');
-    const globalMoneyMult = country.mult * contMods.prod * repMult * prodUpgrade.multiplier;
-    
     const speedUpgrade = getUpgradeMultiplier('speed_mult');
+    const contMods = getContinentModifiers();
     const globalSpeedMult = speedUpgrade.multiplier * contMods.speedMult;
 
+    // Badania (prostsze, nie wymagają przeliczania co klatkę $ bo są stałe)
     const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
+    const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
     const globalKnowMult = contMods.know * knowUpgrade.multiplier * repKnowMult;
 
+    // MASZYNY
     MACHINES_CONFIG.forEach(config => {
         const machineState = gameState.machines[config.id];
         
-        // Sprawdź czy maszyna powinna działać (czy nie jest ukryta/zastąpiona)
         if (!isMachineAvailableInLoc(config) || isMachineReplaced(config.id)) return;
-        
         if (!machineState.unlocked) return;
 
         const hr = getHRBonuses(config.id);
@@ -164,9 +145,8 @@ export function updateGame(deltaTime) {
         machineState.currentProgress += progressAdded;
 
         if (machineState.currentProgress >= config.baseTime) {
-            let revenue = config.baseProd * machineState.level;
-            revenue *= globalMoneyMult;
-            revenue *= hr.prodMult;
+            // Używamy nowej funkcji, żeby logika zarabiania i wyświetlania była identyczna
+            const revenue = getRealMachineProduction(config.id);
             
             gameState.resources.money += revenue;
             gameState.stats.runEarnings += revenue;
@@ -175,11 +155,14 @@ export function updateGame(deltaTime) {
         }
     });
 
+    // BADANIA
     RESEARCH_CONFIG.forEach(config => {
         const resState = gameState.research[config.id];
         if (!resState.unlocked || resState.assignedEnergy <= 0) return;
+        
         const progressAdded = deltaTime * resState.assignedEnergy * globalSpeedMult;
         resState.currentProgress += progressAdded;
+        
         if (resState.currentProgress >= config.baseTime) {
             let gain = config.baseProd * resState.level;
             gain *= globalKnowMult; 
@@ -189,6 +172,37 @@ export function updateGame(deltaTime) {
     });
 }
 
+// --- LOCK & UNLOCK ---
+
+export function isMachineAvailableInLoc(machineConfig) {
+    const { continent, country } = getCurrentLocation();
+    
+    // 1. Sprawdź Kontynent (HARD CHECK)
+    if (machineConfig.reqContinent && machineConfig.reqContinent !== continent.id) return false;
+
+    // 2. Sprawdź Kraj (SOFT CHECK - jeśli odblokowana, zostaje)
+    const isUnlocked = gameState.machines[machineConfig.id]?.unlocked;
+    if (machineConfig.reqLoc && country.id !== machineConfig.reqLoc && !isUnlocked) return false;
+
+    return true;
+}
+
+export function isMachineReplaced(machineId) {
+    const replacement = MACHINES_CONFIG.find(m => m.replaces === machineId);
+    if (replacement) {
+        // Jeśli nowa maszyna jest na tym samym kontynencie...
+        if (isMachineAvailableInLoc(replacement)) {
+            const replacementState = gameState.machines[replacement.id];
+            // ...i jest odblokowana LUB jest dedykowana dla tego kraju
+            if (replacementState && replacementState.unlocked) return true;
+            
+            const { country } = getCurrentLocation();
+            if (replacement.reqLoc && country.id === replacement.reqLoc) return true;
+        }
+    }
+    return false;
+}
+
 export function canUnlock(itemId, type) {
     if (type === 'research') return true; 
     const config = MACHINES_CONFIG.find(m => m.id === itemId);
@@ -196,6 +210,25 @@ export function canUnlock(itemId, type) {
     const reqResState = gameState.research[config.reqRes];
     return reqResState && reqResState.unlocked;
 }
+
+export function unlockItem(itemId, type = 'machine') {
+    if (!canUnlock(itemId, type)) return false;
+    let stateItem = (type === 'machine') ? gameState.machines[itemId] : gameState.research[itemId];
+    let configItem = (type === 'machine') ? MACHINES_CONFIG.find(m => m.id === itemId) : RESEARCH_CONFIG.find(r => r.id === itemId);
+
+    if (type === 'machine' && !isMachineAvailableInLoc(configItem)) return false;
+
+    if (stateItem && !stateItem.unlocked) {
+        if (gameState.resources.money >= configItem.unlockCost) {
+            gameState.resources.money -= configItem.unlockCost;
+            stateItem.unlocked = true;
+            return true;
+        }
+    }
+    return false;
+}
+
+// --- OTHER ACTIONS ---
 
 export function modifyEnergy(targetId, amount) {
     let target = gameState.machines[targetId] || gameState.research[targetId];
@@ -229,24 +262,6 @@ export function buyMaxEnergy() {
         gameState.resources.money -= cost;
         gameState.resources.energyMax += 1;
         return true;
-    }
-    return false;
-}
-
-export function unlockItem(itemId, type = 'machine') {
-    if (!canUnlock(itemId, type)) return false;
-    let stateItem = (type === 'machine') ? gameState.machines[itemId] : gameState.research[itemId];
-    let configItem = (type === 'machine') ? MACHINES_CONFIG.find(m => m.id === itemId) : RESEARCH_CONFIG.find(r => r.id === itemId);
-
-    // Sprawdź czy dostępna w lokalizacji
-    if (type === 'machine' && !isMachineAvailableInLoc(configItem)) return false;
-
-    if (stateItem && !stateItem.unlocked) {
-        if (gameState.resources.money >= configItem.unlockCost) {
-            gameState.resources.money -= configItem.unlockCost;
-            stateItem.unlocked = true;
-            return true;
-        }
     }
     return false;
 }

@@ -1,11 +1,9 @@
 import { gameState } from './state.js';
 import { MACHINES_CONFIG, RESEARCH_CONFIG, UPGRADES_CONFIG } from './data.js';
-import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff } from './game.js';
+import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock } from './game.js';
 
-// ... (DOM Elements and initUI remain mostly the same, BUT ensure updateListUI is correct)
-
+// DOM Elements
 const els = {
-    // (Te same elementy co wcześniej...)
     money: document.getElementById('res-money'),
     know: document.getElementById('res-knowledge'),
     hr: document.getElementById('res-hr'),
@@ -17,14 +15,15 @@ const els = {
     upgradesList: document.getElementById('upgrades-list'),
     countryDisplay: document.getElementById('country-display'),
     prestigeGain: document.getElementById('prestige-gain'),
+    currentRepBonus: document.getElementById('current-rep-bonus'),
     btnExpansion: document.getElementById('btn-expansion'),
-    countPm: document.getElementById('count-pm'),
-    countOpt: document.getElementById('count-opt'),
-    countLog: document.getElementById('count-log'),
-    headhuntResult: document.getElementById('headhunter-result')
+    headhuntResult: document.getElementById('headhunter-result'),
+    // Tutorial
+    tutorialModal: document.getElementById('tutorial-modal'),
+    closeTutorialBtn: document.getElementById('close-tutorial')
 };
 
-// ... (Zmienne do Hold-to-buy: holdTimer, repeatTimeout...)
+// Hold-to-buy variables
 let holdTimer = null;
 let repeatTimeout = null;
 let currentHoldSpeed = 200;
@@ -50,7 +49,17 @@ function startHolding(id, amount) {
 }
 
 export function initUI() {
-    console.log("UI: Init Start");
+    // Tutorial Check
+    if (!localStorage.getItem('tutorial_seen')) {
+        els.tutorialModal.style.display = 'flex';
+    } else {
+        els.tutorialModal.style.display = 'none';
+    }
+    
+    els.closeTutorialBtn.addEventListener('click', () => {
+        els.tutorialModal.style.display = 'none';
+        localStorage.setItem('tutorial_seen', 'true');
+    });
 
     // Tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -67,7 +76,7 @@ export function initUI() {
     renderListStructure(els.researchList, RESEARCH_CONFIG, 'research');
     renderUpgradesList();
 
-    // LISTENERS (Mysz/Dotyk dla hold-to-buy)
+    // Listeners (Mysz/Dotyk)
     const handleStart = (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -82,13 +91,12 @@ export function initUI() {
     document.addEventListener('touchstart', handleStart, { passive: false });
     document.addEventListener('touchend', handleEnd);
 
-    // CLICK LISTENER (reszta)
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
         const id = btn.dataset.id;
         
-        if (btn.classList.contains('btn-plus') || btn.classList.contains('btn-minus')) return; // Obsłużone wyżej
+        if (btn.classList.contains('btn-plus') || btn.classList.contains('btn-minus')) return;
 
         if (btn.classList.contains('btn-unlock-machine')) { unlockItem(id, 'machine'); forceRebuildControls(id, 'machine'); updateUI(); }
         else if (btn.classList.contains('btn-unlock-research')) { unlockItem(id, 'research'); forceRebuildControls(id, 'research'); updateUI(); } 
@@ -152,7 +160,10 @@ function renderListStructure(container, configArray, type) {
         div.innerHTML = `
             <div class="machine-header">
                 <h3>${config.name}</h3>
-                <div class="machine-stats" style="text-align:right;">${resourceIcon}${config.baseProd} <br><span id="time-${type}-${config.id}">${config.baseTime}s</span></div>
+                <div class="machine-stats" style="text-align:right;">
+                    ${resourceIcon}<span id="prod-val-${type}-${config.id}">${config.baseProd}</span> / cykl<br>
+                    <span id="time-${type}-${config.id}">${config.baseTime}s</span>
+                </div>
             </div>
             <div class="progress-container" id="prog-cont-${type}-${config.id}"><div class="progress-bar" id="bar-${type}-${config.id}"></div></div>
             <div class="machine-body" id="body-${type}-${config.id}">
@@ -186,7 +197,19 @@ function forceRebuildControls(id, type) {
     if (!container) return;
     
     if (!state.unlocked) {
-        container.innerHTML = `<button class="btn-unlock-${type}" data-id="${id}" style="background:#e65100;width:100%;padding:5px;cursor:pointer;">ODBLOKUJ $${formatNumber(config.unlockCost)}</button>`;
+        // Sprawdź czy zablokowane przez badania
+        let btnText = `ODBLOKUJ $${formatNumber(config.unlockCost)}`;
+        let disabledAttr = "";
+        let btnColor = "#e65100";
+        
+        if (!canUnlock(id, type) && config.reqRes) {
+            const reqName = RESEARCH_CONFIG.find(r => r.id === config.reqRes).name;
+            btnText = `WYMAGA: ${reqName}`;
+            btnColor = "#333";
+            disabledAttr = "disabled";
+        }
+
+        container.innerHTML = `<button class="btn-unlock-${type}" data-id="${id}" style="background:${btnColor};width:100%;padding:5px;cursor:pointer;" ${disabledAttr}>${btnText}</button>`;
     } else {
         container.innerHTML = `
             <div style="text-align:center; color:#aaa;">Moc: <span id="energy-val-${type}-${id}" style="color:white; font-weight:bold;">${state.assignedEnergy}</span></div>
@@ -208,6 +231,15 @@ function checkAndRenderControls(id, type, state, config) {
     if (isEmpty) needsRebuild = true;
     else if (state.unlocked && hasUnlockBtn) needsRebuild = true;
     else if (!state.unlocked && hasEnergyBtns) needsRebuild = true;
+    
+    // Check if Requirements changed (e.g. bought research, button needs update)
+    if (!state.unlocked && hasUnlockBtn) {
+        const btn = hasUnlockBtn;
+        const isReqMet = canUnlock(id, type);
+        // Jeśli przycisk jest wyłączony, ale wymagania są spełnione -> przebuduj
+        if (btn.disabled && isReqMet) needsRebuild = true;
+    }
+
     if (needsRebuild) forceRebuildControls(id, type);
 }
 
@@ -226,7 +258,10 @@ export function updateUI() {
     if(els.energy) els.energy.textContent = gameState.resources.energyUsed;
     if(els.maxEnergy) { try { els.maxEnergy.textContent = getTotalMaxEnergy(); } catch(e) { els.maxEnergy.textContent = "10"; } }
     document.getElementById('cost-next-energy').textContent = `$${formatNumber(getNextEnergyCost())}`;
+    
     if(els.rep) els.rep.textContent = Math.floor(gameState.resources.reputation);
+    // Pokaż procentowy bonus repa
+    if(els.currentRepBonus) els.currentRepBonus.textContent = `+${(gameState.resources.reputation * 10).toFixed(0)}%`;
 
     const loc = getCurrentLocation();
     if(els.countryDisplay && loc.country) els.countryDisplay.textContent = `[${loc.planet.name}] ${loc.country.name} (x${loc.country.mult})`;
@@ -245,10 +280,6 @@ export function updateUI() {
         if(btn) btn.disabled = gameState.resources.knowledge < currentCost || currentLvl >= up.maxLevel;
     });
 
-    if(els.countPm) els.countPm.textContent = gameState.employees.pm;
-    if(els.countOpt) els.countOpt.textContent = gameState.employees.opt;
-    if(els.countLog) els.countLog.textContent = gameState.employees.log;
-
     const nextExp = checkNextExpansion();
     if (nextExp && els.btnExpansion) {
         document.getElementById('next-country-name').textContent = nextExp.target.name;
@@ -256,7 +287,6 @@ export function updateUI() {
         els.btnExpansion.disabled = gameState.resources.money < nextExp.target.reqCash;
     }
     
-    // --- PRESTIGE DISPLAY FIX ---
     const repGain = calculatePrestigeGain();
     if(els.prestigeGain) els.prestigeGain.textContent = repGain;
     const bonusBtn = document.getElementById('btn-prestige');
@@ -264,15 +294,14 @@ export function updateUI() {
 }
 
 function updateListUI(configArray, type) {
+    const { country } = getCurrentLocation();
+
     configArray.forEach(config => {
         const state = type === 'machine' ? gameState.machines[config.id] : gameState.research[config.id];
         const card = document.getElementById(`${type}-card-${config.id}`);
 
-        // 1. Zastąpione maszyny -> Ukryj
         let visible = true;
-        if (type === 'machine' && isMachineReplaced(config.id)) visible = false;
-        
-        // 2. Region Lock -> Ukryj, jeśli nie dostępna i nie odblokowana
+        if (type === 'machine' && isMachineReplaced && isMachineReplaced(config.id)) visible = false;
         if (type === 'machine' && !isMachineAvailableInLoc(config)) visible = false;
 
         if (card) card.style.display = visible ? 'block' : 'none';
@@ -290,13 +319,29 @@ function updateListUI(configArray, type) {
             
             const timeEl = document.getElementById(`time-${type}-${config.id}`);
             if(state.assignedEnergy > 0 && timeEl) {
-                const realTime = config.baseTime / state.assignedEnergy; 
+                const realTime = config.baseTime / state.assignedEnergy; // Tu uproszczenie
                 timeEl.textContent = realTime < 0.1 ? `${(1/realTime).toFixed(1)}/s` : `${realTime.toFixed(2)}s`;
                 timeEl.style.color = '#4caf50';
             } else if (timeEl) {
                 timeEl.textContent = `${config.baseTime}s`;
                 timeEl.style.color = '#aaa';
             }
+
+            // --- AKTUALIZACJA LICZB PRODUKCJI (Dynamiczna) ---
+            const prodValEl = document.getElementById(`prod-val-${type}-${config.id}`);
+            if (prodValEl) {
+                if (type === 'machine') {
+                    // Pobierz rzeczywistą produkcję z game.js
+                    const realProd = getRealMachineProduction(config.id);
+                    prodValEl.textContent = formatNumber(realProd);
+                    prodValEl.style.color = '#fff';
+                    prodValEl.style.fontWeight = 'bold';
+                } else {
+                    // Dla badań (uproszczone)
+                    prodValEl.textContent = config.baseProd; 
+                }
+            }
+            // --------------------------------------------------
 
             if (type === 'machine') {
                 const staff = getAssignedStaff(config.id);
@@ -306,7 +351,7 @@ function updateListUI(configArray, type) {
             }
         } else {
             const unlockBtn = document.querySelector(`#controls-${type}-${config.id} button`);
-            if (unlockBtn) unlockBtn.style.opacity = gameState.resources.money < config.unlockCost ? "0.5" : "1";
+            if (unlockBtn && !unlockBtn.disabled) unlockBtn.style.opacity = gameState.resources.money < config.unlockCost ? "0.5" : "1";
         }
     });
 }
