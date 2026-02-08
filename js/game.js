@@ -26,6 +26,7 @@ function getContinentModifiers() {
 
 // --- CORE: MATEMATYKA ---
 
+// Oblicza pieniądze na cykl
 export function getRealMachineProduction(machineId) {
     const config = MACHINES_CONFIG.find(m => m.id === machineId);
     const state = gameState.machines[machineId];
@@ -48,17 +49,49 @@ export function getRealMachineProduction(machineId) {
     return production;
 }
 
+// NOWOŚĆ: Oblicza naukę na cykl (potrzebne dla UI i pętli gry)
+export function getRealResearchProduction(researchId) {
+    const config = RESEARCH_CONFIG.find(r => r.id === researchId);
+    const state = gameState.research[researchId];
+    if (!config || !state) return 0;
+
+    const contMods = getContinentModifiers();
+    const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
+    const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
+    
+    // Baza * Level * Kontynent * Ulepszenia * Reputacja
+    let production = config.baseProd * state.level;
+    production *= contMods.know;
+    production *= knowUpgrade.multiplier;
+    production *= repKnowMult;
+
+    return production;
+}
+
+// NOWOŚĆ: Centralna funkcja liczaca mnożniki prędkości (z Optymalizacją)
+export function getCalculatedSpeedMultipliers() {
+    const speedUpgrade = getUpgradeMultiplier('speed_mult');
+    const contMods = getContinentModifiers();
+    
+    // Optymalizacja: addytywny bonus (+0.10 za każdy punkt)
+    const optSpeedBonus = (gameState.resources.optimization || 0) * 0.10;
+
+    // Prędkość Fabryk
+    const factorySpeed = (speedUpgrade.multiplier * contMods.speedMult) + optSpeedBonus;
+    
+    // Prędkość Laboratoriów (2x bonus z Optymalizacji)
+    const labSpeed = factorySpeed + optSpeedBonus;
+
+    return { speedMult: factorySpeed, labSpeedMult: labSpeed };
+}
+
 export function getGlobalProductionRates() {
     let moneyPerSec = 0;
     let knowPerSec = 0;
 
-    const speedUpgrade = getUpgradeMultiplier('speed_mult');
-    const contMods = getContinentModifiers();
-    // ZMIANA: Dodanie bonusu OPTYMALIZACJI (Addytywny)
-    // 1 OPT = +10% Prędkości (0.10)
-    const optSpeedBonus = (gameState.resources.optimization || 0) * 0.10;
-    const globalSpeedMult = (speedUpgrade.multiplier * contMods.speedMult) + optSpeedBonus;
+    const { speedMult, labSpeedMult } = getCalculatedSpeedMultipliers();
 
+    // 1. Maszyny
     MACHINES_CONFIG.forEach(config => {
         const state = gameState.machines[config.id];
         if (!state || !state.unlocked || !isMachineAvailableInLoc(config) || isMachineReplaced(config.id)) return;
@@ -69,30 +102,23 @@ export function getGlobalProductionRates() {
         
         if (workingEnergy > 0) {
             const revenuePerCycle = getRealMachineProduction(config.id);
-            const speed = workingEnergy * globalSpeedMult * hr.speedMult;
-            const cyclesPerSec = speed / config.baseTime;
+            const totalSpeed = workingEnergy * speedMult * hr.speedMult;
+            const cyclesPerSec = totalSpeed / config.baseTime;
             moneyPerSec += revenuePerCycle * cyclesPerSec;
         }
     });
 
-    const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
-    const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
-    const globalKnowMult = contMods.know * knowUpgrade.multiplier * repKnowMult;
-    
-    // ZMIANA: Laboratoria dostają 2x bonus z Optymalizacji
-    const labSpeedMult = globalSpeedMult + optSpeedBonus; // Baza (+OPT) + OPT extra = Baza + 2*OPT
-
+    // 2. Badania
     RESEARCH_CONFIG.forEach(config => {
         const state = gameState.research[config.id];
         if (!state || !state.unlocked) return;
 
         const workingEnergy = state.assignedEnergy;
         if (workingEnergy > 0) {
-            const baseGain = config.baseProd * state.level;
-            const realGain = baseGain * globalKnowMult;
-            const speed = workingEnergy * labSpeedMult;
-            const cyclesPerSec = speed / config.baseTime;
-            knowPerSec += realGain * cyclesPerSec;
+            const gainPerCycle = getRealResearchProduction(config.id);
+            const totalSpeed = workingEnergy * labSpeedMult;
+            const cyclesPerSec = totalSpeed / config.baseTime;
+            knowPerSec += gainPerCycle * cyclesPerSec;
         }
     });
 
@@ -104,21 +130,17 @@ export function getGlobalMultipliers() {
     const contMods = getContinentModifiers();
     const repMultMoney = 1 + (gameState.resources.reputation * 0.1); 
     const repMultKnow = 1 + (gameState.resources.reputation * 0.05);
-    
     const prodUpgrade = getUpgradeMultiplier('production_mult');
-    const speedUpgrade = getUpgradeMultiplier('speed_mult');
     const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
+    
+    const { speedMult } = getCalculatedSpeedMultipliers();
 
     const totalMoneyMult = country.mult * contMods.prod * repMultMoney * prodUpgrade.multiplier;
-    
-    const optSpeedBonus = (gameState.resources.optimization || 0) * 0.10;
-    const totalSpeedMult = (speedUpgrade.multiplier * contMods.speedMult) + optSpeedBonus;
-    
     const totalKnowMult = contMods.know * knowUpgrade.multiplier * repMultKnow;
 
     return {
         money: totalMoneyMult,
-        speed: totalSpeedMult,
+        speed: speedMult,
         knowledge: totalKnowMult,
         repMoney: repMultMoney,
         repKnow: repMultKnow
@@ -219,11 +241,8 @@ export function assignStaff(machineId, type, amount) {
     
     // PRZYPISYWANIE (+)
     if (amount > 0) {
-        // ZMIANA: LIMIT 5 PRACOWNIKÓW DANEGO TYPU NA MASZYNĘ
-        if (assignments[type] >= 5) {
-            // Można dodać jakiś alert/toast: "Max 5 speców tego typu!"
-            return;
-        }
+        // ZMIANA: TWARDY LIMIT 5 PRACOWNIKÓW
+        if (assignments[type] >= 5) return; 
 
         if (gameState.resources.hrPoints >= cost) {
             gameState.resources.hrPoints -= cost;
@@ -254,7 +273,7 @@ export function calculatePrestigeGain() {
     return Math.floor(Math.cbrt(earnings / 5000));
 }
 
-// ZMIANA: Obliczanie punktów Optymalizacji (5x trudniej niż Rep)
+// ZMIANA: Funkcja do obliczania punktów Optymalizacji
 export function calculateOptimizationGain() {
     const repGain = calculatePrestigeGain();
     if (repGain <= 0) return 0;
@@ -270,7 +289,7 @@ export function doRestructuring() {
     }
 }
 
-// ZMIANA: Funkcja wykonująca Optymalizację
+// ZMIANA: Obsługa przycisku Optymalizacji
 export function doOptimization() {
     const gain = calculateOptimizationGain();
     if (gain <= 0) return;
@@ -283,18 +302,8 @@ export function doOptimization() {
 // --- GAME LOOP UPDATE ---
 
 export function updateGame(deltaTime) {
-    const speedUpgrade = getUpgradeMultiplier('speed_mult');
-    const contMods = getContinentModifiers();
-    // OPTYMALIZACJA BONUS
-    const optSpeedBonus = (gameState.resources.optimization || 0) * 0.10;
-    const globalSpeedMult = (speedUpgrade.multiplier * contMods.speedMult) + optSpeedBonus;
-    
-    const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
-    const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
-    const globalKnowMult = contMods.know * knowUpgrade.multiplier * repKnowMult;
-    
-    // LAB BONUS (2x OPT)
-    const labSpeedMult = globalSpeedMult + optSpeedBonus;
+    // Używamy helpera do prędkości
+    const { speedMult, labSpeedMult } = getCalculatedSpeedMultipliers();
 
     MACHINES_CONFIG.forEach(config => {
         const machineState = gameState.machines[config.id];
@@ -308,7 +317,7 @@ export function updateGame(deltaTime) {
         
         if (workingEnergy <= 0) return;
 
-        const progressAdded = deltaTime * workingEnergy * globalSpeedMult * hr.speedMult;
+        const progressAdded = deltaTime * workingEnergy * speedMult * hr.speedMult;
         machineState.currentProgress += progressAdded;
 
         if (machineState.currentProgress >= config.baseTime) {
@@ -324,19 +333,19 @@ export function updateGame(deltaTime) {
         const resState = gameState.research[config.id];
         if (!resState.unlocked || resState.assignedEnergy <= 0) return;
         
+        // Lab ma inną prędkość (podwójna optymalizacja)
         const progressAdded = deltaTime * resState.assignedEnergy * labSpeedMult;
         resState.currentProgress += progressAdded;
         
         if (resState.currentProgress >= config.baseTime) {
-            let gain = config.baseProd * resState.level;
-            gain *= globalKnowMult; 
+            let gain = getRealResearchProduction(config.id);
             gameState.resources.knowledge += gain;
             resState.currentProgress -= config.baseTime;
         }
     });
 }
 
-// --- LOCK & UNLOCK ---
+// --- LOCK & UNLOCK SYSTEM (Bez zmian) ---
 export function isMachineAvailableInLoc(machineConfig) {
     const { continent, country } = getCurrentLocation();
     if (machineConfig.reqContinent && machineConfig.reqContinent !== continent.id) return false;
@@ -377,8 +386,6 @@ export function unlockItem(itemId, type = 'machine') {
     }
     return false;
 }
-
-// --- ACTION HANDLERS ---
 export function modifyEnergy(targetId, amount) {
     let target = gameState.machines[targetId] || gameState.research[targetId];
     if (!target || !target.unlocked) return;
@@ -397,19 +404,29 @@ export function getTotalMaxEnergy() {
     const upgradeBonus = getUpgradeMultiplier('energy_max').adder;
     return Math.max(1, gameState.resources.energyMax + upgradeBonus + contMods.energyMax);
 }
-export function getNextEnergyCost() { return Math.floor(50 * Math.pow(1.5, gameState.resources.energyMax - 10)); }
+export function getNextEnergyCost() {
+    return Math.floor(50 * Math.pow(1.5, gameState.resources.energyMax - 10));
+}
 export function buyMaxEnergy() {
     const cost = getNextEnergyCost();
-    if (gameState.resources.money >= cost) { gameState.resources.money -= cost; gameState.resources.energyMax += 1; return true; }
+    if (gameState.resources.money >= cost) {
+        gameState.resources.money -= cost;
+        gameState.resources.energyMax += 1;
+        return true;
+    }
     return false;
 }
 export function buyUpgrade(upgradeId) {
     const cost = getUpgradeCost(upgradeId);
     if (cost === Infinity) return false;
-    if (gameState.resources.knowledge >= cost) { gameState.resources.knowledge -= cost; if (!gameState.upgrades[upgradeId]) gameState.upgrades[upgradeId] = 0; gameState.upgrades[upgradeId]++; return true; }
+    if (gameState.resources.knowledge >= cost) {
+        gameState.resources.knowledge -= cost;
+        if (!gameState.upgrades[upgradeId]) gameState.upgrades[upgradeId] = 0;
+        gameState.upgrades[upgradeId]++;
+        return true;
+    }
     return false;
 }
-
 export function checkNextExpansion() {
     const { planet, continent, country } = getCurrentLocation();
     const pIndex = gameState.meta.planetIndex;

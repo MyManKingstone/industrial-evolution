@@ -1,6 +1,13 @@
 import { gameState } from './state.js';
 import { MACHINES_CONFIG, RESEARCH_CONFIG, UPGRADES_CONFIG } from './data.js';
-import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock, getUpgradeMultiplier, getGlobalProductionRates, getGlobalMultipliers, getHrPointCost, calculateOptimizationGain, doOptimization } from './game.js';
+import { 
+    modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, 
+    getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, 
+    checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, 
+    doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, getRealResearchProduction, 
+    canUnlock, getUpgradeMultiplier, getGlobalProductionRates, getGlobalMultipliers, getHrPointCost, 
+    calculateOptimizationGain, doOptimization, getCalculatedSpeedMultipliers 
+} from './game.js';
 
 // --- DOM ELEMENTS ---
 const els = {
@@ -192,7 +199,7 @@ function renderListStructure(container, configArray, type) {
             `;
         }
 
-        const resourceIcon = type === 'research' ? 'Wiedza: ' : '$';
+        const resourceIcon = type === 'research' ? 'Nauka: ' : '$';
         let hrSection = '';
         if (type === 'machine') {
             hrSection = `
@@ -231,7 +238,7 @@ function renderListStructure(container, configArray, type) {
             <div class="machine-header">
                 <h3>${config.name}</h3>
                 <div class="machine-stats" style="text-align:right;">
-                    ${resourceIcon}<span id="prod-val-${type}-${config.id}">${config.baseProd}</span> / cykl<br>
+                    ${resourceIcon}<span id="prod-val-${type}-${config.id}">${config.baseProd}</span><span id="unit-${type}-${config.id}"> / cykl</span><br>
                     <span id="time-${type}-${config.id}">${config.baseTime}s</span>
                 </div>
             </div>
@@ -395,19 +402,19 @@ export function updateUI() {
     if(els.opt) els.opt.textContent = Math.floor(gameState.resources.optimization || 0);
 
     const currRep = gameState.resources.reputation;
-    const gain = calculatePrestigeGain();
-    const nextRep = currRep + gain;
+    const gainRep = calculatePrestigeGain();
+    const nextRep = currRep + gainRep;
 
     if(els.repBonusMoneyCurr) els.repBonusMoneyCurr.textContent = `+${(currRep * 10).toFixed(0)}%`;
     if(els.repBonusKnowCurr) els.repBonusKnowCurr.textContent = `+${(currRep * 5).toFixed(0)}%`;
     if(els.repBonusMoneyNext) els.repBonusMoneyNext.textContent = `+${(nextRep * 10).toFixed(0)}%`;
     if(els.repBonusKnowNext) els.repBonusKnowNext.textContent = `+${(nextRep * 5).toFixed(0)}%`;
 
-    if(els.prestigeGain) els.prestigeGain.textContent = gain;
-    const bonusBtn = document.getElementById('btn-prestige');
-    if(bonusBtn) {
-        bonusBtn.disabled = gain <= 0;
-        bonusBtn.style.opacity = gain > 0 ? "1" : "0.5";
+    if(els.prestigeGain) els.prestigeGain.textContent = gainRep;
+    const btnRep = document.getElementById('btn-prestige');
+    if(btnRep) { 
+        btnRep.disabled = gainRep <= 0; 
+        btnRep.style.opacity = gainRep > 0 ? "1" : "0.5"; 
     }
 
     // Optimization
@@ -417,7 +424,10 @@ export function updateUI() {
     if(els.optBonusLabCurr) els.optBonusLabCurr.textContent = `+${(currOpt * 20).toFixed(0)}%`;
     if(els.optGain) els.optGain.textContent = gainOpt;
     const btnOpt = document.getElementById('btn-optimization');
-    if(btnOpt) { btnOpt.disabled = gainOpt <= 0; btnOpt.style.opacity = gainOpt > 0 ? "1" : "0.5"; }
+    if(btnOpt) { 
+        btnOpt.disabled = gainOpt <= 0; 
+        btnOpt.style.opacity = gainOpt > 0 ? "1" : "0.5"; 
+    }
 
     // 5. LOCATION
     const loc = getCurrentLocation();
@@ -467,9 +477,7 @@ export function updateUI() {
 }
 
 function updateListUI(configArray, type) {
-    const { country, continent } = getCurrentLocation();
-    const speedUpgrade = getUpgradeMultiplier('speed_mult');
-    const globalSpeedMult = speedUpgrade.multiplier * (continent.mods?.speedMult || 1.0);
+    const { speedMult, labSpeedMult } = getCalculatedSpeedMultipliers();
 
     configArray.forEach(config => {
         const state = type === 'machine' ? gameState.machines[config.id] : gameState.research[config.id];
@@ -491,7 +499,6 @@ function updateListUI(configArray, type) {
                 if (select) {
                     const candidates = gameState.headhunters.filter(h => h.targetId === config.id);
                     if (select.options.length !== candidates.length + 1) {
-                        const currentSelection = select.value;
                         while (select.options.length > 1) { select.remove(1); }
                         candidates.forEach(cand => {
                             const opt = document.createElement('option');
@@ -506,10 +513,10 @@ function updateListUI(configArray, type) {
                 }
             }
 
-            // Energy Logic & Soft Cap
-            // ZMIANA: Ukrywanie przycisku [+]
+            // NAPRAWA: Chowanie przycisku [+]
             const btnPlus = card.querySelector('.btn-plus');
             if (btnPlus) {
+                // Jeśli energia >= 10, ukryj przycisk
                 btnPlus.style.display = state.assignedEnergy >= 10 ? 'none' : 'inline-block';
             }
 
@@ -526,9 +533,12 @@ function updateListUI(configArray, type) {
             const percent = Math.min(100, (state.currentProgress / config.baseTime) * 100);
             const bar = document.getElementById(`bar-${type}-${config.id}`);
             
+            // NAPRAWA: Poprawne mnożniki czasu (Maszyny vs Labo)
             let realCycleTime = 999;
+            const currentGlobalSpeed = (type === 'research') ? labSpeedMult : speedMult;
+
             if (effectiveEnergy > 0) {
-                realCycleTime = config.baseTime / (effectiveEnergy * globalSpeedMult * hrSpeedMult);
+                realCycleTime = config.baseTime / (effectiveEnergy * currentGlobalSpeed * hrSpeedMult);
             }
 
             if (bar) {
@@ -536,7 +546,7 @@ function updateListUI(configArray, type) {
                     bar.style.width = '100%'; 
                     bar.style.transition = 'none'; 
                 } else {
-                    bar.style.width = `${percent}%`;
+                    bar.style.width = `${percent}%`; 
                     bar.style.transition = 'width 0.1s linear';
                 }
             }
@@ -564,26 +574,44 @@ function updateListUI(configArray, type) {
                 }
             }
 
-            // ZMIANA: Wyświetlanie $/s
+            // NAPRAWA: Wyświetlanie $/s lub Nauka/s
             const prodValEl = document.getElementById(`prod-val-${type}-${config.id}`);
-            if (prodValEl && type === 'machine') {
+            const unitEl = document.getElementById(`unit-${type}-${config.id}`);
+            
+            if (prodValEl) {
                 if (effectiveEnergy > 0) {
-                    const realProd = getRealMachineProduction(config.id);
-                    const perSec = realProd * (1 / realCycleTime);
-                    prodValEl.textContent = `${formatNumber(perSec)} /s`;
+                    let perSec = 0;
+                    if (type === 'machine') {
+                        const realProd = getRealMachineProduction(config.id);
+                        perSec = realProd / realCycleTime;
+                    } else {
+                        const realGain = getRealResearchProduction(config.id);
+                        perSec = realGain / realCycleTime;
+                    }
+                    prodValEl.textContent = formatNumber(perSec);
+                    // Zmiana tekstu jednostki
+                    if (unitEl) unitEl.textContent = " / s";
                 } else {
-                    prodValEl.textContent = `0 /s`;
+                    // Jeśli maszyna stoi, pokaż bazową produkcję (dla informacji)
+                    prodValEl.textContent = formatNumber(config.baseProd);
+                    if (unitEl) unitEl.textContent = " / cykl";
                 }
             }
 
             if (type === 'machine') {
                 const staff = getAssignedStaff(config.id);
-                const pms = document.getElementById(`val-pm-${config.id}`);
-                const opts = document.getElementById(`val-opt-${config.id}`);
-                const logs = document.getElementById(`val-log-${config.id}`);
-                if(pms) pms.textContent = staff.pm;
-                if(opts) opts.textContent = staff.opt;
-                if(logs) logs.textContent = staff.log;
+                // NAPRAWA: Dodanie blokady wizualnej przycisków HR jeśli max
+                const btnAssignPm = card.querySelector(`button[data-type="pm"].btn-assign-hr`);
+                const btnAssignOpt = card.querySelector(`button[data-type="opt"].btn-assign-hr`);
+                const btnAssignLog = card.querySelector(`button[data-type="log"].btn-assign-hr`);
+                
+                if (btnAssignPm) btnAssignPm.disabled = staff.pm >= 5;
+                if (btnAssignOpt) btnAssignOpt.disabled = staff.opt >= 5;
+                if (btnAssignLog) btnAssignLog.disabled = staff.log >= 5;
+
+                document.getElementById(`val-pm-${config.id}`).textContent = staff.pm;
+                document.getElementById(`val-opt-${config.id}`).textContent = staff.opt;
+                document.getElementById(`val-log-${config.id}`).textContent = staff.log;
             }
         } else {
             const unlockBtn = document.querySelector(`#controls-${type}-${config.id} button`);
