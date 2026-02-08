@@ -88,9 +88,9 @@
                         <h3>Dostępne Stanowiska</h3>
                         <p style="font-size: 0.9em; color:#aaa;">(Max 5 pracowników danego typu na maszynę)</p>
                         <ul style="list-style: none; padding: 0;">
-                            <li><strong style="color:#ffca28">Project Manager (1 HR):</strong> +10% Zysku</li>
-                            <li><strong style="color:#42a5f5">Optymalizator (3 HR):</strong> Darmowa energia</li>
-                            <li><strong style="color:#66bb6a">Logistyk (2 HR):</strong> +10% Prędkości</li>
+                            <li><strong style="color:#ffca28">Project Manager (1 HR):</strong> +10% Zysku | Zatrudnieni: <span id="count-pm" style="color:#ffca28; font-weight:bold;">0</span></li>
+                            <li><strong style="color:#42a5f5">Optymalizator (3 HR):</strong> Darmowa energia | Zatrudnieni: <span id="count-opt" style="color:#42a5f5; font-weight:bold;">0</span></li>
+                            <li><strong style="color:#66bb6a">Logistyk (2 HR):</strong> +10% Prędkości | Zatrudnieni: <span id="count-log" style="color:#66bb6a; font-weight:bold;">0</span></li>
                         </ul>
                     </div>
 
@@ -121,10 +121,15 @@
                     <h3 style="color: #bb86fc;">Restrukturyzacja</h3>
                     <div style="font-size: 0.85em; margin-bottom: 10px;">
                         <p>Resetuje wszystko oprócz OPT.</p>
-                        <p>Bonus (Mnożnik):</p>
-                        <ul style="padding-left: 20px; color: #bb86fc;">
+                        <p style="margin-bottom: 5px;">Aktualny bonus (Mnożnik):</p>
+                        <ul style="padding-left: 20px; color: #bb86fc; margin: 3px 0;">
                             <li>Pieniądze: <span id="rep-bonus-money-curr">+0%</span></li>
                             <li>Wiedza: <span id="rep-bonus-know-curr">+0%</span></li>
+                        </ul>
+                        <p style="margin: 8px 0 5px 0;">Po resecie:</p>
+                        <ul style="padding-left: 20px; color: #bb86fc; margin: 3px 0;">
+                            <li>Pieniądze: <span id="rep-bonus-money-next">+0%</span></li>
+                            <li>Wiedza: <span id="rep-bonus-know-next">+0%</span></li>
                         </ul>
                     </div>
                     <p>Zyskasz: <span id="prestige-gain" style="color: #bb86fc; font-weight: bold; font-size: 1.2em;">0</span> Rep</p>
@@ -135,10 +140,15 @@
                     <h3 style="color: #03dac6;">Optymalizacja</h3>
                     <div style="font-size: 0.85em; margin-bottom: 10px;">
                         <p>Resetuje wszystko oprócz REP.</p>
-                        <p>Bonus (Szybkość +):</p>
-                        <ul style="padding-left: 20px; color: #03dac6;">
+                        <p style="margin-bottom: 5px;">Aktualny bonus (Szybkość +):</p>
+                        <ul style="padding-left: 20px; color: #03dac6; margin: 3px 0;">
                             <li>Fabryki: <span id="opt-bonus-fac-curr">+0%</span></li>
                             <li>Labo: <span id="opt-bonus-lab-curr">+0%</span></li>
+                        </ul>
+                        <p style="margin: 8px 0 5px 0;">Po resecie:</p>
+                        <ul style="padding-left: 20px; color: #03dac6; margin: 3px 0;">
+                            <li>Fabryki: <span id="opt-bonus-fac-next">+0%</span></li>
+                            <li>Labo: <span id="opt-bonus-lab-next">+0%</span></li>
                         </ul>
                     </div>
                     <p>Zyskasz: <span id="opt-gain" style="color: #03dac6; font-weight: bold; font-size: 1.2em;">0</span> Opt</p>

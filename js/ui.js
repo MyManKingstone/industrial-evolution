@@ -31,6 +31,9 @@ const els = {
     hrCostKnow: document.getElementById('hr-cost-know'),
     headhuntResult: document.getElementById('headhunter-result'),
     hrRoster: document.getElementById('hr-roster'),
+    countPm: document.getElementById('count-pm'),
+    countOpt: document.getElementById('count-opt'),
+    countLog: document.getElementById('count-log'),
     // Modals & Stats
     tutorialModal: document.getElementById('tutorial-modal'),
     closeTutorialBtn: document.getElementById('close-tutorial'),
@@ -42,6 +45,8 @@ const els = {
     repBonusKnowNext: document.getElementById('rep-bonus-know-next'),
     optBonusFacCurr: document.getElementById('opt-bonus-fac-curr'),
     optBonusLabCurr: document.getElementById('opt-bonus-lab-curr'),
+    optBonusFacNext: document.getElementById('opt-bonus-fac-next'),
+    optBonusLabNext: document.getElementById('opt-bonus-lab-next'),
     statMoneyMult: document.getElementById('stat-money-mult'),
     statKnowMult: document.getElementById('stat-know-mult'),
     statSpeedMult: document.getElementById('stat-speed-mult')
@@ -94,6 +99,29 @@ export function initUI() {
             const tabId = e.target.dataset.tab;
             document.getElementById(`tab-${tabId}`).style.display = 'block';
         });
+    });
+
+    // Inicjalizacja stanów maszyn i badań
+    MACHINES_CONFIG.forEach(config => {
+        if (!gameState.machines[config.id]) {
+            gameState.machines[config.id] = {
+                level: 1,
+                unlocked: config.unlockCost === 0,
+                assignedEnergy: 0,
+                currentProgress: 0
+            };
+        }
+    });
+    
+    RESEARCH_CONFIG.forEach(config => {
+        if (!gameState.research[config.id]) {
+            gameState.research[config.id] = {
+                level: 1,
+                unlocked: config.unlockCost === 0,
+                assignedEnergy: 0,
+                currentProgress: 0
+            };
+        }
     });
 
     renderListStructure(els.machinesList, MACHINES_CONFIG, 'machine');
@@ -420,8 +448,13 @@ export function updateUI() {
     // Optimization
     const currOpt = gameState.resources.optimization || 0;
     const gainOpt = calculateOptimizationGain();
+    const nextOpt = currOpt + gainOpt;
+    
     if(els.optBonusFacCurr) els.optBonusFacCurr.textContent = `+${(currOpt * 10).toFixed(0)}%`;
     if(els.optBonusLabCurr) els.optBonusLabCurr.textContent = `+${(currOpt * 20).toFixed(0)}%`;
+    if(els.optBonusFacNext) els.optBonusFacNext.textContent = `+${(nextOpt * 10).toFixed(0)}%`;
+    if(els.optBonusLabNext) els.optBonusLabNext.textContent = `+${(nextOpt * 20).toFixed(0)}%`;
+    
     if(els.optGain) els.optGain.textContent = gainOpt;
     const btnOpt = document.getElementById('btn-optimization');
     if(btnOpt) { 

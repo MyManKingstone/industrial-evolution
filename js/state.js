@@ -84,50 +84,44 @@ export function resetSave() {
 // Funkcja obsługująca różne rodzaje resetu (Prestiż / Podróż)
 export function applyPrestigeReset(type) {
     // Zachowujemy to co ma przetrwać
-    const currentRep = gameState.resources.reputation;
-    const currentOpt = gameState.resources.optimization; // Zachowaj OPT
     const currentStats = gameState.stats;
     const currentMeta = gameState.meta;
-    const currentHeadhunters = gameState.headhunters; // Headhunterzy zostają? Zazwyczaj tak w prestiżu.
-    // Decyzja: Przyjmijmy, że Headhunterzy zostają przy resecie kraju, ale przy resecie planety mogą znikać?
-    // Na razie zostawmy ich zawsze (są drodzy).
+    const currentHeadhunters = gameState.headhunters;
 
     // Reset stanu do czystego
     const newState = deepCopy(initialState);
 
-    // Przywracanie wartości w zależności od typu resetu
-    newState.resources.reputation = currentRep;
-    newState.resources.optimization = currentOpt; // Przywróć OPT
+    // Przywracanie wartości universal
     newState.stats = currentStats;
     newState.headhunters = currentHeadhunters;
 
     if (type === 'restructuring') {
-        // Resetuje wszystko (lokację też? Zazwyczaj prestiż nie cofa lokacji w grach typu "podróż", 
-        // ale w tej grze "Restrukturyzacja" to miękki reset w obecnym miejscu).
-        // Zostajemy w tym samym kraju.
+        // Miękki reset - zachowaj Rep
+        const currentRep = gameState.resources.reputation;
+        newState.resources.reputation = currentRep;
         newState.meta = currentMeta;
-        
-        // Wyzeruj run earnings dla nowego runu
         newState.stats.runEarnings = 0;
     } 
     else if (type === 'optimization') {
-        // Nowy typ: Optymalizacja. Działa jak Restrukturyzacja, ale daje OPT.
+        // Miękki reset - zachowaj Opt
+        const currentOpt = gameState.resources.optimization;
+        newState.resources.optimization = currentOpt;
         newState.meta = currentMeta;
         newState.stats.runEarnings = 0;
     }
     else if (type === 'country') {
-        // Przeniesienie do nowego kraju (zachowaj Rep/Opt, zmień index)
-        newState.meta = currentMeta;
-        newState.stats.runEarnings = 0; // Nowy kraj = budowa od zera
+        // Ekspansja kraju - resetuj Rep i Opt, zmień index
+        newState.meta = { ...currentMeta, countryIndex: currentMeta.countryIndex + 1 };
+        newState.stats.runEarnings = 0;
     }
     else if (type === 'continent') {
-        // Nowy kontynent (zachowaj Rep/Opt, zmień index)
-        newState.meta = currentMeta;
+        // Nowy kontynent - resetuj wszystko, zmień indeksy
+        newState.meta = { ...currentMeta, continentIndex: currentMeta.continentIndex + 1, countryIndex: 0 };
         newState.stats.runEarnings = 0;
     }
     else if (type === 'planet') {
-        // Nowa planeta (zachowaj Rep/Opt, zmień index)
-        newState.meta = currentMeta;
+        // Nowa planeta - resetuj wszystko, zmień indeksy
+        newState.meta = { ...currentMeta, planetIndex: currentMeta.planetIndex + 1, continentIndex: 0, countryIndex: 0 };
         newState.stats.runEarnings = 0;
     }
 

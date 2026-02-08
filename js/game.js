@@ -277,7 +277,7 @@ export function calculatePrestigeGain() {
 export function calculateOptimizationGain() {
     const repGain = calculatePrestigeGain();
     if (repGain <= 0) return 0;
-    return Math.floor(repGain / 5);
+    return Math.floor(repGain / 2);
 }
 
 export function doRestructuring() {
@@ -349,8 +349,8 @@ export function updateGame(deltaTime) {
 export function isMachineAvailableInLoc(machineConfig) {
     const { continent, country } = getCurrentLocation();
     if (machineConfig.reqContinent && machineConfig.reqContinent !== continent.id) return false;
-    const isUnlocked = gameState.machines[machineConfig.id]?.unlocked;
-    if (machineConfig.reqLoc && country.id !== machineConfig.reqLoc && !isUnlocked) return false;
+    // reqLoc: maszyna dostępna TYLKO w tej lokacji
+    if (machineConfig.reqLoc && country.id !== machineConfig.reqLoc) return false;
     return true;
 }
 export function isMachineReplaced(machineId) {
@@ -444,5 +444,8 @@ export function doExpansion() {
     let msg = `EKSPANSJA do: ${next.target.name}`;
     if (next.type === 'continent') msg = `NOWY KONTYNENT: ${next.target.name} (Reset Kraju)`;
     if (next.type === 'planet') msg = `KOLONIZACJA: ${next.target.name} (HARD RESET)`;
-    if (confirm(msg)) applyPrestigeReset(next.type);
+    if (confirm(msg)) {
+        gameState.resources.money -= next.target.reqCash;
+        applyPrestigeReset(next.type);
+    }
 }
