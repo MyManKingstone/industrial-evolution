@@ -26,7 +26,6 @@ function getContinentModifiers() {
 
 // --- CORE: MATEMATYKA ---
 
-// Oblicza ile maszyna zarabia na jeden cykl (po wszystkich bonusach)
 export function getRealMachineProduction(machineId) {
     const config = MACHINES_CONFIG.find(m => m.id === machineId);
     const state = gameState.machines[machineId];
@@ -49,7 +48,6 @@ export function getRealMachineProduction(machineId) {
     return production;
 }
 
-// Oblicza globalny przychód na sekundę (do wyświetlania w UI)
 export function getGlobalProductionRates() {
     let moneyPerSec = 0;
     let knowPerSec = 0;
@@ -58,14 +56,16 @@ export function getGlobalProductionRates() {
     const contMods = getContinentModifiers();
     const globalSpeedMult = speedUpgrade.multiplier * contMods.speedMult;
 
-    // 1. Maszyny (Money)
     MACHINES_CONFIG.forEach(config => {
         const state = gameState.machines[config.id];
-        // Pomijamy zablokowane, ukryte lub zastąpione
         if (!state || !state.unlocked || !isMachineAvailableInLoc(config) || isMachineReplaced(config.id)) return;
 
         const hr = getHRBonuses(config.id);
-        const workingEnergy = state.assignedEnergy + hr.energyFree;
+        
+        // ZMIANA: Soft Cap Energii (maksymalnie 10 z ręcznego przypisania)
+        const cappedEnergy = Math.min(state.assignedEnergy, 10);
+        // Energia z HR (Optymalizator) dodaje się PONAD limit (nagroda za HR)
+        const workingEnergy = cappedEnergy + hr.energyFree;
         
         if (workingEnergy > 0) {
             const revenuePerCycle = getRealMachineProduction(config.id);
@@ -75,7 +75,6 @@ export function getGlobalProductionRates() {
         }
     });
 
-    // 2. Badania (Knowledge)
     const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
     const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
     const globalKnowMult = contMods.know * knowUpgrade.multiplier * repKnowMult;
@@ -84,7 +83,7 @@ export function getGlobalProductionRates() {
         const state = gameState.research[config.id];
         if (!state || !state.unlocked) return;
 
-        const workingEnergy = state.assignedEnergy;
+        const workingEnergy = state.assignedEnergy; // Badania nie mają capu (na razie)
         if (workingEnergy > 0) {
             const baseGain = config.baseProd * state.level;
             const realGain = baseGain * globalKnowMult;
@@ -97,7 +96,6 @@ export function getGlobalProductionRates() {
     return { money: moneyPerSec, knowledge: knowPerSec };
 }
 
-// NOWA FUNKCJA: Do panelu statystyk (wyświetla łączne mnożniki)
 export function getGlobalMultipliers() {
     const { country } = getCurrentLocation();
     const contMods = getContinentModifiers();
@@ -174,7 +172,6 @@ export function doHeadhunt() {
     const names = ["Janusz", "Elon", "Grażyna", "Walter", "Skyler", "Gordon"];
     const roles = ["Mistrz", "Ekspert", "Specjalista"];
     
-    // Ważne: Losujemy tylko spośród maszyn, które są już ODBLOKOWANE
     const unlocked = MACHINES_CONFIG.filter(m => gameState.machines[m.id]?.unlocked);
     if (unlocked.length === 0) { gameState.resources.hrPoints += 5; return "Brak maszyn!"; }
     
@@ -189,10 +186,22 @@ export function doHeadhunt() {
     return `Zrekrutowano: ${newSpec.name} dla: ${target.name}!`;
 }
 
+// ZMIANA: Skalowanie kosztu punktów HR
+export function getHrPointCost() {
+    // Obliczamy ile łącznie kupiliśmy punktów (aktualnie dostępne + zatrudnieni)
+    const totalEmployees = (gameState.employees.pm || 0) + (gameState.employees.opt || 0) + (gameState.employees.log || 0);
+    const totalPoints = gameState.resources.hrPoints + totalEmployees;
+    
+    // Wzór: Baza * 1.2 ^ Ilość
+    const moneyCost = Math.floor(10000 * Math.pow(1.2, totalPoints));
+    const knowCost = Math.floor(100 * Math.pow(1.2, totalPoints));
+    
+    return { money: moneyCost, knowledge: knowCost };
+}
+
 // --- GAME LOOP ---
 
 export function updateGame(deltaTime) {
-    // Te zmienne są używane wewnątrz pętli, ale wyliczamy je raz dla wydajności
     const speedUpgrade = getUpgradeMultiplier('speed_mult');
     const contMods = getContinentModifiers();
     const globalSpeedMult = speedUpgrade.multiplier * contMods.speedMult;
@@ -204,12 +213,14 @@ export function updateGame(deltaTime) {
     MACHINES_CONFIG.forEach(config => {
         const machineState = gameState.machines[config.id];
         
-        // Pomijamy jeśli zablokowana lub niedostępna w lokacji
         if (!machineState.unlocked) return;
         if (!isMachineAvailableInLoc(config) || isMachineReplaced(config.id)) return;
 
         const hr = getHRBonuses(config.id);
-        const workingEnergy = machineState.assignedEnergy + hr.energyFree;
+        
+        // ZMIANA: Soft Cap Energii w pętli gry
+        const cappedEnergy = Math.min(machineState.assignedEnergy, 10);
+        const workingEnergy = cappedEnergy + hr.energyFree;
         
         if (workingEnergy <= 0) return;
 
@@ -218,7 +229,6 @@ export function updateGame(deltaTime) {
 
         if (machineState.currentProgress >= config.baseTime) {
             const revenue = getRealMachineProduction(config.id);
-            
             gameState.resources.money += revenue;
             gameState.stats.runEarnings += revenue;
             gameState.stats.lifetimeEarnings += revenue;
@@ -246,28 +256,18 @@ export function updateGame(deltaTime) {
 
 export function isMachineAvailableInLoc(machineConfig) {
     const { continent, country } = getCurrentLocation();
-    
-    // 1. Region Lock (Kontynent) - Twarda blokada
     if (machineConfig.reqContinent && machineConfig.reqContinent !== continent.id) return false;
-
-    // 2. Country Lock (Miękka blokada - jeśli już odblokowana, to zostaje)
     const isUnlocked = gameState.machines[machineConfig.id]?.unlocked;
     if (machineConfig.reqLoc && country.id !== machineConfig.reqLoc && !isUnlocked) return false;
-
     return true;
 }
 
 export function isMachineReplaced(machineId) {
     const replacement = MACHINES_CONFIG.find(m => m.replaces === machineId);
     if (replacement) {
-        // Czy replacement jest w ogóle dostępny w tym regionie?
         if (isMachineAvailableInLoc(replacement)) {
             const replacementState = gameState.machines[replacement.id];
-            
-            // Jeśli replacement jest już kupiony -> stara znika
             if (replacementState && replacementState.unlocked) return true;
-            
-            // Jeśli replacement jest dedykowany dla TEGO kraju (jest w sklepie) -> stara znika
             const { country } = getCurrentLocation();
             if (replacement.reqLoc && country.id === replacement.reqLoc) return true;
         }
@@ -276,7 +276,6 @@ export function isMachineReplaced(machineId) {
 }
 
 export function canUnlock(itemId, type) {
-    // Sprawdza tylko wymagania technologiczne (nie pieniądze)
     if (type === 'research') return true; 
     const config = MACHINES_CONFIG.find(m => m.id === itemId);
     if (!config.reqRes) return true; 
@@ -285,16 +284,12 @@ export function canUnlock(itemId, type) {
 }
 
 export function unlockItem(itemId, type = 'machine') {
-    // 1. Sprawdź wymagania technologiczne
     if (!canUnlock(itemId, type)) return false;
-    
     let stateItem = (type === 'machine') ? gameState.machines[itemId] : gameState.research[itemId];
     let configItem = (type === 'machine') ? MACHINES_CONFIG.find(m => m.id === itemId) : RESEARCH_CONFIG.find(r => r.id === itemId);
 
-    // 2. Sprawdź dostępność w lokacji
     if (type === 'machine' && !isMachineAvailableInLoc(configItem)) return false;
 
-    // 3. Kupno
     if (stateItem && !stateItem.unlocked) {
         if (gameState.resources.money >= configItem.unlockCost) {
             gameState.resources.money -= configItem.unlockCost;
@@ -305,15 +300,13 @@ export function unlockItem(itemId, type = 'machine') {
     return false;
 }
 
-// --- OTHER ACTIONS ---
+// --- ACTION HANDLERS ---
 
 export function modifyEnergy(targetId, amount) {
     let target = gameState.machines[targetId] || gameState.research[targetId];
     if (!target || !target.unlocked) return;
-    
     const used = gameState.resources.energyUsed;
     const max = getTotalMaxEnergy(); 
-
     if (amount > 0 && used + amount <= max) {
         target.assignedEnergy += amount;
         gameState.resources.energyUsed += amount;
@@ -346,7 +339,6 @@ export function buyMaxEnergy() {
 export function buyUpgrade(upgradeId) {
     const cost = getUpgradeCost(upgradeId);
     if (cost === Infinity) return false;
-
     if (gameState.resources.knowledge >= cost) {
         gameState.resources.knowledge -= cost;
         if (!gameState.upgrades[upgradeId]) gameState.upgrades[upgradeId] = 0;
@@ -357,9 +349,10 @@ export function buyUpgrade(upgradeId) {
 }
 
 export function buyHrPoint() {
-    if (gameState.resources.money >= 10000 && gameState.resources.knowledge >= 100) {
-        gameState.resources.money -= 10000;
-        gameState.resources.knowledge -= 100;
+    const cost = getHrPointCost();
+    if (gameState.resources.money >= cost.money && gameState.resources.knowledge >= cost.knowledge) {
+        gameState.resources.money -= cost.money;
+        gameState.resources.knowledge -= cost.knowledge;
         gameState.resources.hrPoints++;
         return true;
     }
@@ -372,11 +365,22 @@ export function assignStaff(machineId, type, amount) {
     if (!costConfig) return;
     const cost = costConfig.cost;
     
-    if (amount > 0 && gameState.resources.hrPoints >= cost) {
-        gameState.resources.hrPoints -= cost;
-        gameState.employees[type]++; 
-        assignments[type]++;         
+    // PRZYPISYWANIE (+)
+    if (amount > 0) {
+        if (gameState.resources.hrPoints >= cost) {
+            gameState.resources.hrPoints -= cost;
+            gameState.employees[type]++; 
+            assignments[type]++;         
+        }
     } 
+    // ZMIANA: REDYSTRYBUCJA (-)
+    else if (amount < 0) {
+        if (assignments[type] > 0) {
+            gameState.resources.hrPoints += cost; // Zwrot punktów
+            gameState.employees[type]--;
+            assignments[type]--;
+        }
+    }
 }
 
 export function equipSpecialist(machineId, specId) {
@@ -384,13 +388,13 @@ export function equipSpecialist(machineId, specId) {
     else gameState.machineSpecialists[machineId] = parseInt(specId);
 }
 
-// ZMIANA: Szybsze skalowanie prestiżu (dzielnik 100 zamiast 1000)
+// ZMIANA: Znaczne osłabienie przyrostu Reputacji (Nerf)
 export function calculatePrestigeGain() {
     const earnings = gameState.stats.runEarnings;
-    if (earnings < 1000) return 0;
-    // Było: Math.cbrt(earnings / 1000)
-    // Jest: Math.cbrt(earnings / 100) -> 2.15x więcej punktów
-    return Math.floor(Math.cbrt(earnings / 100));
+    if (earnings < 5000) return 0;
+    // Było: cbrt(earnings / 100). Jest: cbrt(earnings / 5000)
+    // To sprawia, że zdobycie pierwszego punktu wymaga $5000, a kolejnych znacznie więcej.
+    return Math.floor(Math.cbrt(earnings / 5000));
 }
 
 export function doRestructuring() {
@@ -408,18 +412,9 @@ export function checkNextExpansion() {
     const cIndex = gameState.meta.continentIndex;
     const kIndex = gameState.meta.countryIndex;
     
-    // Sprawdź czy to nie ostatni kraj na kontynencie
-    if (kIndex < continent.countries.length - 1) {
-        return { type: 'country', target: continent.countries[kIndex + 1] };
-    }
-    // Sprawdź czy to nie ostatni kontynent na planecie
-    if (cIndex < planet.continents.length - 1) {
-        return { type: 'continent', target: planet.continents[cIndex + 1] };
-    }
-    // Sprawdź czy to nie ostatnia planeta
-    if (pIndex < LOCATIONS.length - 1) {
-        return { type: 'planet', target: LOCATIONS[pIndex + 1] };
-    }
+    if (kIndex < continent.countries.length - 1) return { type: 'country', target: continent.countries[kIndex + 1] };
+    if (cIndex < planet.continents.length - 1) return { type: 'continent', target: planet.continents[cIndex + 1] };
+    if (pIndex < LOCATIONS.length - 1) return { type: 'planet', target: LOCATIONS[pIndex + 1] };
     return null; 
 }
 

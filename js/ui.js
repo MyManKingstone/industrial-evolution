@@ -1,6 +1,6 @@
 import { gameState } from './state.js';
 import { MACHINES_CONFIG, RESEARCH_CONFIG, UPGRADES_CONFIG } from './data.js';
-import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock, getUpgradeMultiplier, getGlobalProductionRates, getGlobalMultipliers } from './game.js';
+import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock, getUpgradeMultiplier, getGlobalProductionRates, getGlobalMultipliers, getHrPointCost } from './game.js';
 
 // --- DOM ELEMENTS ---
 const els = {
@@ -17,10 +17,12 @@ const els = {
     locationMods: document.getElementById('location-mods'),
     prestigeGain: document.getElementById('prestige-gain'),
     btnExpansion: document.getElementById('btn-expansion'),
-    countPm: document.getElementById('count-pm'),
-    countOpt: document.getElementById('count-opt'),
-    countLog: document.getElementById('count-log'),
+    // HR Elements
+    hrCostMoney: document.getElementById('hr-cost-money'),
+    hrCostKnow: document.getElementById('hr-cost-know'),
     headhuntResult: document.getElementById('headhunter-result'),
+    hrRoster: document.getElementById('hr-roster'),
+    // Modals & Stats
     tutorialModal: document.getElementById('tutorial-modal'),
     closeTutorialBtn: document.getElementById('close-tutorial'),
     moneyRate: document.getElementById('money-rate'),
@@ -29,8 +31,6 @@ const els = {
     repBonusKnowCurr: document.getElementById('rep-bonus-know-curr'),
     repBonusMoneyNext: document.getElementById('rep-bonus-money-next'),
     repBonusKnowNext: document.getElementById('rep-bonus-know-next'),
-    hrRoster: document.getElementById('hr-roster'), 
-    // Statystyki
     statMoneyMult: document.getElementById('stat-money-mult'),
     statKnowMult: document.getElementById('stat-know-mult'),
     statSpeedMult: document.getElementById('stat-speed-mult')
@@ -49,12 +49,11 @@ function stopHolding() {
     currentHoldSpeed = 200;
 }
 
-// Funkcja przyjmuje teraz dowolną akcję (callback)
 function startHolding(actionFn) {
-    actionFn(); // Wykonaj raz od razu
+    actionFn(); 
     holdTimer = setTimeout(() => {
         const loop = () => {
-            actionFn(); // Powtarzaj
+            actionFn(); 
             currentHoldSpeed = Math.max(30, currentHoldSpeed * 0.85); 
             repeatTimeout = setTimeout(loop, currentHoldSpeed);
         };
@@ -99,7 +98,7 @@ export function initUI() {
         if (btn.classList.contains('btn-plus')) { e.preventDefault(); startHolding(() => modifyEnergy(btn.dataset.id, 1)); }
         else if (btn.classList.contains('btn-minus')) { e.preventDefault(); startHolding(() => modifyEnergy(btn.dataset.id, -1)); }
         
-        // 2. Punkty HR
+        // 2. Punkty HR (Kupowanie)
         else if (btn.id === 'btn-buy-hr') { e.preventDefault(); startHolding(() => { buyHrPoint(); updateUI(); }); }
         
         // 3. Max Energia
@@ -107,6 +106,12 @@ export function initUI() {
         
         // 4. Kupowanie Ulepszeń
         else if (btn.classList.contains('btn-buy-upgrade')) { e.preventDefault(); startHolding(() => { buyUpgrade(btn.dataset.id); updateUI(); }); }
+        
+        // 5. Przypisywanie HR (+)
+        else if (btn.classList.contains('btn-assign-hr')) { e.preventDefault(); startHolding(() => { assignStaff(btn.dataset.id, btn.dataset.type, 1); updateUI(); }); }
+        
+        // 6. Odejmowanie HR (-)
+        else if (btn.classList.contains('btn-unassign-hr')) { e.preventDefault(); startHolding(() => { assignStaff(btn.dataset.id, btn.dataset.type, -1); updateUI(); }); }
     };
     
     const handleEnd = () => stopHolding();
@@ -128,7 +133,9 @@ export function initUI() {
             btn.classList.contains('btn-minus') || 
             btn.id === 'btn-buy-hr' || 
             btn.id === 'btn-buy-energy' ||
-            btn.classList.contains('btn-buy-upgrade')) return;
+            btn.classList.contains('btn-buy-upgrade') ||
+            btn.classList.contains('btn-assign-hr') ||
+            btn.classList.contains('btn-unassign-hr')) return;
 
         if (btn.classList.contains('btn-unlock-machine')) { unlockItem(id, 'machine'); forceRebuildControls(id, 'machine'); updateUI(); }
         else if (btn.classList.contains('btn-unlock-research')) { unlockItem(id, 'research'); forceRebuildControls(id, 'research'); updateUI(); } 
@@ -136,9 +143,8 @@ export function initUI() {
             const res = doHeadhunt(); 
             if(els.headhuntResult) els.headhuntResult.textContent = res; 
             updateUI(); 
-            renderHeadhunterList(); // Odśwież listę po rekrutacji
+            renderHeadhunterList();
         }
-        else if (btn.classList.contains('btn-assign-hr')) { assignStaff(id, btn.dataset.type, 1); updateUI(); }
     });
 
     if(document.getElementById('btn-prestige')) document.getElementById('btn-prestige').addEventListener('click', doRestructuring);
@@ -152,7 +158,7 @@ export function initUI() {
     });
     
     updateUI();
-    renderHeadhunterList(); // Pierwsze renderowanie listy HR
+    renderHeadhunterList();
 }
 
 // --- RENDER FUNCTIONS ---
@@ -184,11 +190,33 @@ function renderListStructure(container, configArray, type) {
         const resourceIcon = type === 'research' ? 'Wiedza: ' : '$';
         let hrSection = '';
         if (type === 'machine') {
+            // ZMIANA: DODAŁEM PRZYCISKI "MINUS" (-)
             hrSection = `
             <div class="controls-section" style="margin-top: 10px; border-top: 1px dashed #444; padding-top: 5px;">
-                <div class="control-row"><span class="text-pm">Proj. Manager (1 HR)</span><span><span id="val-pm-${config.id}">0</span> <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="pm">+</button></span></div>
-                <div class="control-row"><span class="text-opt">Optymalizator (3 HR)</span><span><span id="val-opt-${config.id}">0</span> <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="opt">+</button></span></div>
-                <div class="control-row"><span class="text-log">Logistyk (2 HR)</span><span><span id="val-log-${config.id}">0</span> <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="log">+</button></span></div>
+                <div class="control-row">
+                    <span class="text-pm">PM (+10% $)</span>
+                    <span>
+                        <span id="val-pm-${config.id}">0</span> 
+                        <button class="btn-unassign-hr small-btn" data-id="${config.id}" data-type="pm">-</button>
+                        <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="pm">+</button>
+                    </span>
+                </div>
+                <div class="control-row">
+                    <span class="text-opt">Opt (Free En)</span>
+                    <span>
+                        <span id="val-opt-${config.id}">0</span> 
+                        <button class="btn-unassign-hr small-btn" data-id="${config.id}" data-type="opt">-</button>
+                        <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="opt">+</button>
+                    </span>
+                </div>
+                <div class="control-row">
+                    <span class="text-log">Log (+10% Spd)</span>
+                    <span>
+                        <span id="val-log-${config.id}">0</span> 
+                        <button class="btn-unassign-hr small-btn" data-id="${config.id}" data-type="log">-</button>
+                        <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="log">+</button>
+                    </span>
+                </div>
                 <select class="specialist-select" data-id="${config.id}" id="sel-spec-${config.id}" style="width:100%; margin-top:5px; padding:5px; background:#333; color:white; border:1px solid #555;">
                     <option value="">-- Wybierz Specjalistę --</option>
                 </select>
@@ -343,17 +371,23 @@ export function updateUI() {
         document.getElementById('cost-next-energy').textContent = `$${formatNumber(getNextEnergyCost())}`;
     }
     
+    // ZMIANA: Wyświetlanie aktualnego kosztu HR
+    const hrCost = getHrPointCost();
+    if(els.hrCostMoney) els.hrCostMoney.textContent = `$${formatNumber(hrCost.money)}`;
+    if(els.hrCostKnow) els.hrCostKnow.textContent = formatNumber(hrCost.knowledge);
+
+    // 2. RATES
     const rates = getGlobalProductionRates();
     if(els.moneyRate) els.moneyRate.textContent = `(+$${formatNumber(rates.money)}/s)`;
     if(els.knowRate) els.knowRate.textContent = `(+${formatNumber(rates.knowledge)}/s)`;
 
-    // 2. STATS PANEL (NOWY)
+    // 3. STATS PANEL
     const mults = getGlobalMultipliers();
     if(els.statMoneyMult) els.statMoneyMult.textContent = `x${formatNumber(mults.money)}`;
     if(els.statKnowMult) els.statKnowMult.textContent = `x${formatNumber(mults.knowledge)}`;
     if(els.statSpeedMult) els.statSpeedMult.textContent = `x${mults.speed.toFixed(2)}`;
 
-    // 3. PRESTIGE
+    // 4. PRESTIGE
     if(els.rep) els.rep.textContent = Math.floor(gameState.resources.reputation);
     
     const currRep = gameState.resources.reputation;
@@ -372,7 +406,7 @@ export function updateUI() {
         bonusBtn.style.opacity = gain > 0 ? "1" : "0.5";
     }
 
-    // 4. LOCATION
+    // 5. LOCATION
     const loc = getCurrentLocation();
     if(els.countryDisplay && loc.country) {
         els.countryDisplay.textContent = `[${loc.planet.name}] ${loc.country.name}`;
@@ -389,11 +423,11 @@ export function updateUI() {
         els.locationMods.textContent = info.join(' | ');
     }
 
-    // 5. RENDER LISTS
+    // 6. RENDER LISTS
     updateListUI(MACHINES_CONFIG, 'machine');
     updateListUI(RESEARCH_CONFIG, 'research');
 
-    // 6. UPGRADES
+    // 7. UPGRADES
     UPGRADES_CONFIG.forEach(up => {
         const currentLvl = gameState.upgrades[up.id] || 0;
         const currentCost = getUpgradeCost(up.id);
@@ -406,11 +440,7 @@ export function updateUI() {
         if(btn) btn.disabled = gameState.resources.knowledge < currentCost || currentLvl >= up.maxLevel;
     });
 
-    // 7. EXPANSION & HR
-    if(els.countPm) els.countPm.textContent = gameState.employees.pm;
-    if(els.countOpt) els.countOpt.textContent = gameState.employees.opt;
-    if(els.countLog) els.countLog.textContent = gameState.employees.log;
-
+    // 8. EXPANSION & HR
     const nextExp = checkNextExpansion();
     if (nextExp && els.btnExpansion) {
         document.getElementById('next-country-name').textContent = nextExp.target.name;
@@ -442,27 +472,34 @@ function updateListUI(configArray, type) {
             if (type === 'machine') {
                 const select = document.getElementById(`sel-spec-${config.id}`);
                 if (select) {
-                    const currentSelection = select.value;
-                    while (select.options.length > 1) { select.remove(1); }
+                    // Check if options count matches data to avoid constant rebuild
                     const candidates = gameState.headhunters.filter(h => h.targetId === config.id);
-                    candidates.forEach(cand => {
-                        const opt = document.createElement('option');
-                        opt.value = cand.id;
-                        opt.textContent = `${cand.name} (+${(cand.bonus*100).toFixed(0)}% Prod)`;
-                        select.appendChild(opt);
-                    });
-                    if (gameState.machineSpecialists[config.id]) {
-                        select.value = gameState.machineSpecialists[config.id];
+                    // Rebuild only if length changed or first time
+                    if (select.options.length !== candidates.length + 1) {
+                        const currentSelection = select.value;
+                        while (select.options.length > 1) { select.remove(1); }
+                        
+                        candidates.forEach(cand => {
+                            const opt = document.createElement('option');
+                            opt.value = cand.id;
+                            opt.textContent = `${cand.name} (+${(cand.bonus*100).toFixed(0)}% Prod)`;
+                            select.appendChild(opt);
+                        });
+                        if (gameState.machineSpecialists[config.id]) {
+                            select.value = gameState.machineSpecialists[config.id];
+                        }
                     }
                 }
             }
 
-            let effectiveEnergy = state.assignedEnergy;
+            // ZMIANA: Soft Cap Energii w UI
+            const cappedEnergy = Math.min(state.assignedEnergy, 10);
+            let effectiveEnergy = cappedEnergy; 
             let hrSpeedMult = 1.0;
 
             if (type === 'machine') {
                 const staff = getAssignedStaff(config.id);
-                effectiveEnergy += (staff.opt * 2);
+                effectiveEnergy += (staff.opt * 2); // Optymalizator dodaje PONAD limit
                 hrSpeedMult = 1 + (staff.log * 0.10);
             }
 
@@ -486,6 +523,9 @@ function updateListUI(configArray, type) {
 
             const enVal = document.getElementById(`energy-val-${type}-${config.id}`);
             if(enVal) enVal.textContent = state.assignedEnergy;
+            // Opcjonalnie: pokoloruj na czerwono jeśli > 10 (marnotrawstwo)
+            if (state.assignedEnergy > 10) enVal.style.color = "#ff5252";
+            else enVal.style.color = "white";
             
             const timeEl = document.getElementById(`time-${type}-${config.id}`);
             if(timeEl) {
