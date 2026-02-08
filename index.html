@@ -13,7 +13,7 @@
             <h2>Witaj w Industrial Evolution! 🏭</h2>
             <p>Twoim celem jest zbudowanie imperium przemysłowego sięgającego gwiazd.</p>
             <ul>
-                <li>⚡ <strong>Energia:</strong> Maszyny nie działają same. Przydziel im MOC (przyciski +/-).</li>
+                <li>⚡ <strong>Energia:</strong> Maszyny nie działają same. Przydziel im MOC (max 10/maszynę).</li>
                 <li>💰 <strong>Zysk:</strong> Zarabiaj, kupuj nowe maszyny i ulepszaj je.</li>
                 <li>🔬 <strong>Badania:</strong> W zakładce Laboratorium generuj Wiedzę, by kupować stałe ulepszenia.</li>
                 <li>🌍 <strong>Podróż:</strong> Gdy osiągniesz limit, przenieś się do nowego kraju (Ekspansja).</li>
@@ -51,6 +51,7 @@
                     <button id="btn-buy-energy" class="small-btn">[+] (<span id="cost-next-energy">$50</span>)</button>
                 </div>
                 <div class="res-item" style="color: #bb86fc;">Rep: <span id="res-rep">0</span></div>
+                <div class="res-item" style="color: #03dac6;">Opt: <span id="res-opt">0</span></div>
             </div>
         </header>
 
@@ -85,7 +86,7 @@
 
                     <div class="hr-info-panel panel">
                         <h3>Dostępne Stanowiska</h3>
-                        <p style="font-size: 0.9em; color:#aaa;">(Przypisz pracowników bezpośrednio w panelu maszyny)</p>
+                        <p style="font-size: 0.9em; color:#aaa;">(Max 5 pracowników danego typu na maszynę)</p>
                         <ul style="list-style: none; padding: 0;">
                             <li><strong style="color:#ffca28">Project Manager (1 HR):</strong> +10% Zysku</li>
                             <li><strong style="color:#42a5f5">Optymalizator (3 HR):</strong> Darmowa energia</li>
@@ -116,22 +117,32 @@
                     <div id="upgrades-list" class="upgrades-grid-sidebar"></div>
                 </div>
 
-                <div class="panel prestige-panel">
-                    <h3>Restrukturyzacja</h3>
+                <div class="panel prestige-panel" style="border-color: #bb86fc;">
+                    <h3 style="color: #bb86fc;">Restrukturyzacja</h3>
                     <div style="font-size: 0.85em; margin-bottom: 10px;">
-                        <p>Obecny Bonus:</p>
+                        <p>Resetuje wszystko oprócz OPT.</p>
+                        <p>Bonus (Mnożnik):</p>
                         <ul style="padding-left: 20px; color: #bb86fc;">
                             <li>Pieniądze: <span id="rep-bonus-money-curr">+0%</span></li>
                             <li>Wiedza: <span id="rep-bonus-know-curr">+0%</span></li>
                         </ul>
-                        <p>Po Resecie:</p>
+                    </div>
+                    <p>Zyskasz: <span id="prestige-gain" style="color: #bb86fc; font-weight: bold; font-size: 1.2em;">0</span> Rep</p>
+                    <button id="btn-prestige" disabled>RESTRUKTURYZACJA</button>
+                </div>
+
+                <div class="panel prestige-panel" style="border-color: #03dac6; margin-top: 10px;">
+                    <h3 style="color: #03dac6;">Optymalizacja</h3>
+                    <div style="font-size: 0.85em; margin-bottom: 10px;">
+                        <p>Resetuje wszystko oprócz REP.</p>
+                        <p>Bonus (Szybkość +):</p>
                         <ul style="padding-left: 20px; color: #03dac6;">
-                            <li>Pieniądze: <span id="rep-bonus-money-next">+0%</span></li>
-                            <li>Wiedza: <span id="rep-bonus-know-next">+0%</span></li>
+                            <li>Fabryki: <span id="opt-bonus-fac-curr">+0%</span></li>
+                            <li>Labo: <span id="opt-bonus-lab-curr">+0%</span></li>
                         </ul>
                     </div>
-                    <p>Zyskasz: <span id="prestige-gain" style="color: #03dac6; font-weight: bold; font-size: 1.2em;">0</span> Rep</p>
-                    <button id="btn-prestige" disabled>RESTRUKTURYZACJA</button>
+                    <p>Zyskasz: <span id="opt-gain" style="color: #03dac6; font-weight: bold; font-size: 1.2em;">0</span> Opt</p>
+                    <button id="btn-optimization" disabled style="background-color: #00695c; color: white;">OPTYMALIZACJA</button>
                 </div>
 
                 <div class="panel expansion-panel">

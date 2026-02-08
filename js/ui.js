@@ -1,6 +1,6 @@
 import { gameState } from './state.js';
 import { MACHINES_CONFIG, RESEARCH_CONFIG, UPGRADES_CONFIG } from './data.js';
-import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock, getUpgradeMultiplier, getGlobalProductionRates, getGlobalMultipliers, getHrPointCost } from './game.js';
+import { modifyEnergy, buyMaxEnergy, getNextEnergyCost, unlockItem, buyUpgrade, getUpgradeCost, getTotalMaxEnergy, calculatePrestigeGain, doRestructuring, doExpansion, getCurrentLocation, checkNextExpansion, isMachineReplaced, isMachineAvailableInLoc, buyHrPoint, assignStaff, doHeadhunt, equipSpecialist, getAssignedStaff, getRealMachineProduction, canUnlock, getUpgradeMultiplier, getGlobalProductionRates, getGlobalMultipliers, getHrPointCost, calculateOptimizationGain, doOptimization } from './game.js';
 
 // --- DOM ELEMENTS ---
 const els = {
@@ -10,12 +10,14 @@ const els = {
     energy: document.getElementById('res-energy'),
     maxEnergy: document.getElementById('res-max-energy'),
     rep: document.getElementById('res-rep'),
+    opt: document.getElementById('res-opt'),
     machinesList: document.getElementById('machines-list'),
     researchList: document.getElementById('research-list'),
     upgradesList: document.getElementById('upgrades-list'),
     countryDisplay: document.getElementById('country-display'),
     locationMods: document.getElementById('location-mods'),
     prestigeGain: document.getElementById('prestige-gain'),
+    optGain: document.getElementById('opt-gain'),
     btnExpansion: document.getElementById('btn-expansion'),
     // HR Elements
     hrCostMoney: document.getElementById('hr-cost-money'),
@@ -31,6 +33,8 @@ const els = {
     repBonusKnowCurr: document.getElementById('rep-bonus-know-curr'),
     repBonusMoneyNext: document.getElementById('rep-bonus-money-next'),
     repBonusKnowNext: document.getElementById('rep-bonus-know-next'),
+    optBonusFacCurr: document.getElementById('opt-bonus-fac-curr'),
+    optBonusLabCurr: document.getElementById('opt-bonus-lab-curr'),
     statMoneyMult: document.getElementById('stat-money-mult'),
     statKnowMult: document.getElementById('stat-know-mult'),
     statSpeedMult: document.getElementById('stat-speed-mult')
@@ -148,6 +152,7 @@ export function initUI() {
     });
 
     if(document.getElementById('btn-prestige')) document.getElementById('btn-prestige').addEventListener('click', doRestructuring);
+    if(document.getElementById('btn-optimization')) document.getElementById('btn-optimization').addEventListener('click', doOptimization);
     if(els.btnExpansion) els.btnExpansion.addEventListener('click', doExpansion);
 
     document.addEventListener('change', (e) => {
@@ -190,13 +195,12 @@ function renderListStructure(container, configArray, type) {
         const resourceIcon = type === 'research' ? 'Wiedza: ' : '$';
         let hrSection = '';
         if (type === 'machine') {
-            // ZMIANA: DODAŁEM PRZYCISKI "MINUS" (-)
             hrSection = `
             <div class="controls-section" style="margin-top: 10px; border-top: 1px dashed #444; padding-top: 5px;">
                 <div class="control-row">
                     <span class="text-pm">PM (+10% $)</span>
                     <span>
-                        <span id="val-pm-${config.id}">0</span> 
+                        <span id="val-pm-${config.id}">0</span>/5 
                         <button class="btn-unassign-hr small-btn" data-id="${config.id}" data-type="pm">-</button>
                         <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="pm">+</button>
                     </span>
@@ -204,7 +208,7 @@ function renderListStructure(container, configArray, type) {
                 <div class="control-row">
                     <span class="text-opt">Opt (Free En)</span>
                     <span>
-                        <span id="val-opt-${config.id}">0</span> 
+                        <span id="val-opt-${config.id}">0</span>/5 
                         <button class="btn-unassign-hr small-btn" data-id="${config.id}" data-type="opt">-</button>
                         <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="opt">+</button>
                     </span>
@@ -212,7 +216,7 @@ function renderListStructure(container, configArray, type) {
                 <div class="control-row">
                     <span class="text-log">Log (+10% Spd)</span>
                     <span>
-                        <span id="val-log-${config.id}">0</span> 
+                        <span id="val-log-${config.id}">0</span>/5 
                         <button class="btn-unassign-hr small-btn" data-id="${config.id}" data-type="log">-</button>
                         <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="log">+</button>
                     </span>
@@ -275,7 +279,7 @@ function renderHeadhunterList() {
         div.style.padding = '5px';
         div.style.borderLeft = '3px solid #ff5252';
         div.style.fontSize = '0.9em';
-        div.innerHTML = `<strong>${h.name}</strong> <br> Specjalizacja: ${targetMachine} <br> <span style="color: #4caf50;">+${(h.bonus * 100).toFixed(0)}% Produkcji</span>`;
+        div.innerHTML = `<strong>${h.name}</strong> <br> Spec: ${targetMachine} <br> <span style="color: #4caf50;">+${(h.bonus * 100).toFixed(0)}% Prod</span>`;
         els.hrRoster.appendChild(div);
     });
 }
@@ -371,7 +375,6 @@ export function updateUI() {
         document.getElementById('cost-next-energy').textContent = `$${formatNumber(getNextEnergyCost())}`;
     }
     
-    // ZMIANA: Wyświetlanie aktualnego kosztu HR
     const hrCost = getHrPointCost();
     if(els.hrCostMoney) els.hrCostMoney.textContent = `$${formatNumber(hrCost.money)}`;
     if(els.hrCostKnow) els.hrCostKnow.textContent = formatNumber(hrCost.knowledge);
@@ -389,7 +392,8 @@ export function updateUI() {
 
     // 4. PRESTIGE
     if(els.rep) els.rep.textContent = Math.floor(gameState.resources.reputation);
-    
+    if(els.opt) els.opt.textContent = Math.floor(gameState.resources.optimization || 0);
+
     const currRep = gameState.resources.reputation;
     const gain = calculatePrestigeGain();
     const nextRep = currRep + gain;
@@ -405,6 +409,15 @@ export function updateUI() {
         bonusBtn.disabled = gain <= 0;
         bonusBtn.style.opacity = gain > 0 ? "1" : "0.5";
     }
+
+    // Optimization
+    const currOpt = gameState.resources.optimization || 0;
+    const gainOpt = calculateOptimizationGain();
+    if(els.optBonusFacCurr) els.optBonusFacCurr.textContent = `+${(currOpt * 10).toFixed(0)}%`;
+    if(els.optBonusLabCurr) els.optBonusLabCurr.textContent = `+${(currOpt * 20).toFixed(0)}%`;
+    if(els.optGain) els.optGain.textContent = gainOpt;
+    const btnOpt = document.getElementById('btn-optimization');
+    if(btnOpt) { btnOpt.disabled = gainOpt <= 0; btnOpt.style.opacity = gainOpt > 0 ? "1" : "0.5"; }
 
     // 5. LOCATION
     const loc = getCurrentLocation();
@@ -441,6 +454,10 @@ export function updateUI() {
     });
 
     // 8. EXPANSION & HR
+    if(els.countPm) els.countPm.textContent = gameState.employees.pm;
+    if(els.countOpt) els.countOpt.textContent = gameState.employees.opt;
+    if(els.countLog) els.countLog.textContent = gameState.employees.log;
+
     const nextExp = checkNextExpansion();
     if (nextExp && els.btnExpansion) {
         document.getElementById('next-country-name').textContent = nextExp.target.name;
@@ -472,13 +489,10 @@ function updateListUI(configArray, type) {
             if (type === 'machine') {
                 const select = document.getElementById(`sel-spec-${config.id}`);
                 if (select) {
-                    // Check if options count matches data to avoid constant rebuild
                     const candidates = gameState.headhunters.filter(h => h.targetId === config.id);
-                    // Rebuild only if length changed or first time
                     if (select.options.length !== candidates.length + 1) {
                         const currentSelection = select.value;
                         while (select.options.length > 1) { select.remove(1); }
-                        
                         candidates.forEach(cand => {
                             const opt = document.createElement('option');
                             opt.value = cand.id;
@@ -492,14 +506,20 @@ function updateListUI(configArray, type) {
                 }
             }
 
-            // ZMIANA: Soft Cap Energii w UI
+            // Energy Logic & Soft Cap
+            // ZMIANA: Ukrywanie przycisku [+]
+            const btnPlus = card.querySelector('.btn-plus');
+            if (btnPlus) {
+                btnPlus.style.display = state.assignedEnergy >= 10 ? 'none' : 'inline-block';
+            }
+
             const cappedEnergy = Math.min(state.assignedEnergy, 10);
-            let effectiveEnergy = cappedEnergy; 
+            let effectiveEnergy = cappedEnergy;
             let hrSpeedMult = 1.0;
 
             if (type === 'machine') {
                 const staff = getAssignedStaff(config.id);
-                effectiveEnergy += (staff.opt * 2); // Optymalizator dodaje PONAD limit
+                effectiveEnergy += (staff.opt * 2);
                 hrSpeedMult = 1 + (staff.log * 0.10);
             }
 
@@ -522,10 +542,10 @@ function updateListUI(configArray, type) {
             }
 
             const enVal = document.getElementById(`energy-val-${type}-${config.id}`);
-            if(enVal) enVal.textContent = state.assignedEnergy;
-            // Opcjonalnie: pokoloruj na czerwono jeśli > 10 (marnotrawstwo)
-            if (state.assignedEnergy > 10) enVal.style.color = "#ff5252";
-            else enVal.style.color = "white";
+            if(enVal) {
+                enVal.textContent = state.assignedEnergy;
+                enVal.style.color = state.assignedEnergy >= 10 ? '#ff5252' : 'white';
+            }
             
             const timeEl = document.getElementById(`time-${type}-${config.id}`);
             if(timeEl) {
@@ -544,10 +564,16 @@ function updateListUI(configArray, type) {
                 }
             }
 
+            // ZMIANA: Wyświetlanie $/s
             const prodValEl = document.getElementById(`prod-val-${type}-${config.id}`);
             if (prodValEl && type === 'machine') {
-                const realProd = getRealMachineProduction(config.id);
-                prodValEl.textContent = formatNumber(realProd);
+                if (effectiveEnergy > 0) {
+                    const realProd = getRealMachineProduction(config.id);
+                    const perSec = realProd * (1 / realCycleTime);
+                    prodValEl.textContent = `${formatNumber(perSec)} /s`;
+                } else {
+                    prodValEl.textContent = `0 /s`;
+                }
             }
 
             if (type === 'machine') {

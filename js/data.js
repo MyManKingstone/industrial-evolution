@@ -2,124 +2,124 @@ export const MACHINES_CONFIG = [
     // --- TIER 1 (PODSTAWOWE) ---
     { 
         id: "manual_press", name: "Ręczna Prasa", 
-        baseCost: 0, baseProd: 10, baseTime: 2.0, unlockCost: 0, 
+        baseCost: 0, baseProd: 10, baseTime: 3.0, unlockCost: 0, // Czas 2.0 -> 3.0
         reqRes: null, reqContinent: null 
     },
     { 
         id: "cobalt_cleaner", name: "Oczyszczarka Kobaltu", 
-        baseCost: 500, baseProd: 35, baseTime: 3.0, unlockCost: 0, // Czas 1.8 -> 3.0
+        baseCost: 500, baseProd: 35, baseTime: 4.0, unlockCost: 0, // Czas 1.8 -> 4.0
         reqRes: null, replaces: "manual_press", reqLoc: "egypt", reqContinent: "africa" 
     },
     { 
         id: "coal_sorter", name: "Sortownia Węgla", 
-        baseCost: 0, baseProd: 50, baseTime: 2.5, unlockCost: 0, 
+        baseCost: 0, baseProd: 50, baseTime: 3.5, unlockCost: 0, // Czas 1.5 -> 3.5
         reqRes: null, replaces: "manual_press", reqLoc: "poland", reqContinent: "europe" 
     },
 
     // --- TIER 2 (LOGISTYKA) ---
     { 
         id: "conveyor_belt", name: "Taśmociąg", 
-        baseCost: 100, baseProd: 60, baseTime: 5.0, unlockCost: 250, // Czas 4.0 -> 5.0
+        baseCost: 100, baseProd: 60, baseTime: 8.0, unlockCost: 250, // Czas 4.0 -> 8.0, Koszt 150 -> 250
         reqRes: null, reqContinent: null 
     },
     { 
         id: "wire_isolator", name: "Izolator Drutu", 
-        baseCost: 2000, baseProd: 180, baseTime: 4.5, unlockCost: 0, 
+        baseCost: 2000, baseProd: 180, baseTime: 7.0, unlockCost: 0, 
         reqRes: null, replaces: "conveyor_belt", reqLoc: "rsa", reqContinent: "africa" 
     },
 
-    // --- TIER 3 (PARA / ENERGIA - ZNACZNY SKOK TRUDNOŚCI) ---
+    // --- TIER 3 (PARA / ENERGIA - DUŻY SKOK TRUDNOŚCI) ---
     { 
         id: "steam_engine", name: "Silnik Parowy", 
-        baseCost: 1000, baseProd: 400, baseTime: 12.0, unlockCost: 5000, // Czas 8->12, Koszt Unlock 1.2k->5k
+        baseCost: 1000, baseProd: 400, baseTime: 20.0, unlockCost: 5000, // Czas 8.0 -> 20.0, Unlock 1.2k -> 5k
         reqRes: "thermo", reqContinent: null 
     },
     { 
         id: "coal_turbine", name: "Turbina Węglowa", 
-        baseCost: 10000, baseProd: 1200, baseTime: 10.0, unlockCost: 0, 
+        baseCost: 10000, baseProd: 1200, baseTime: 18.0, unlockCost: 0, 
         reqRes: "thermo", replaces: "steam_engine", reqLoc: "poland", reqContinent: "europe" 
     },
 
     // --- TIER 4 (ELEKTRYCZNOŚĆ) ---
     { 
         id: "electric_loom", name: "Tkacka Elektryczna", 
-        baseCost: 25000, baseProd: 2500, baseTime: 20.0, unlockCost: 50000, // Czas 6->20, Unlock 15k->50k
+        baseCost: 25000, baseProd: 2500, baseTime: 40.0, unlockCost: 50000, // Czas 6.0 -> 40.0, Unlock 10k -> 50k
         reqRes: "electr", reqContinent: null 
     },
     { 
         id: "precision_lathe", name: "Tokarka Precyzyjna", 
-        baseCost: 75000, baseProd: 6000, baseTime: 15.0, unlockCost: 0, 
+        baseCost: 75000, baseProd: 6000, baseTime: 35.0, unlockCost: 0, 
         reqRes: "electr", replaces: "electric_loom", reqLoc: "germany", reqContinent: "europe" 
     },
 
     // --- TIER 5 (MASOWA PRODUKCJA) ---
     { 
         id: "assembly_line", name: "Linia Montażowa", 
-        baseCost: 250000, baseProd: 20000, baseTime: 40.0, unlockCost: 500000, // Czas 12->40
+        baseCost: 250000, baseProd: 20000, baseTime: 60.0, unlockCost: 500000, // Czas 12.0 -> 60.0 (1 min)
         reqRes: "logistics", reqContinent: "america" 
     },
     { 
         id: "royal_assembly", name: "Królewska Manufaktura", 
-        baseCost: 200000, baseProd: 25000, baseTime: 35.0, unlockCost: 0, 
+        baseCost: 200000, baseProd: 25000, baseTime: 50.0, unlockCost: 0, 
         reqRes: "logistics", replaces: "assembly_line", reqLoc: "uk", reqContinent: "europe" 
     },
 
     // --- TIER 6+ (ZAAWANSOWANE - CZASY W MINUTACH) ---
     { 
         id: "diesel_generator", name: "Agregat Przemysłowy", 
-        baseCost: 1000000, baseProd: 50000, baseTime: 60.0, unlockCost: 2500000, // 1 min
+        baseCost: 1000000, baseProd: 50000, baseTime: 120.0, unlockCost: 2500000, // 2 min
         reqRes: "chemistry", reqContinent: "america" 
     },
     { 
         id: "cnc_machine", name: "Obrabiarka CNC", 
-        baseCost: 5000000, baseProd: 150000, baseTime: 90.0, unlockCost: 10000000, // 1.5 min
+        baseCost: 5000000, baseProd: 150000, baseTime: 180.0, unlockCost: 10000000, // 3 min
         reqRes: "computing", reqContinent: "asia" 
     },
     { 
         id: "robot_arm", name: "Ramię Robota", 
-        baseCost: 25000000, baseProd: 600000, baseTime: 120.0, unlockCost: 50000000, // 2 min
+        baseCost: 25000000, baseProd: 600000, baseTime: 300.0, unlockCost: 50000000, // 5 min
         reqRes: "robotics", reqContinent: "asia" 
     },
     { 
         id: "chip_fab", name: "Fabryka Chipów", 
-        baseCost: 100000000, baseProd: 2500000, baseTime: 300.0, unlockCost: 250000000, // 5 min
+        baseCost: 100000000, baseProd: 2500000, baseTime: 600.0, unlockCost: 250000000, // 10 min
         reqRes: "nanotech", reqContinent: "asia" 
     },
 
-    // --- KOSMOS (LATE GAME) ---
+    // --- KOSMOS (LATE GAME - BARDZO DŁUGIE CYKLE) ---
     { 
         id: "moon_miner", name: "Koparka Helu-3", 
-        baseCost: 1000000000, baseProd: 10000000, baseTime: 600.0, unlockCost: 2000000000, // 10 min
+        baseCost: 1000000000, baseProd: 10000000, baseTime: 1200.0, unlockCost: 2000000000, // 20 min
         reqRes: "robotics", reqContinent: "moon_base" 
     },
     { 
         id: "martian_printer", name: "Drukarka 4D", 
-        baseCost: 5000000000, baseProd: 50000000, baseTime: 900.0, unlockCost: 10000000000, // 15 min
+        baseCost: 5000000000, baseProd: 50000000, baseTime: 1800.0, unlockCost: 10000000000, // 30 min
         reqRes: "ai_systems", reqContinent: "mars_base" 
     },
     { 
         id: "quantum_assembler", name: "Monter Kwantowy", 
-        baseCost: 100000000000, baseProd: 5000000000, baseTime: 1800.0, unlockCost: 100000000000, // 30 min
+        baseCost: 100000000000, baseProd: 5000000000, baseTime: 3600.0, unlockCost: 100000000000, // 60 min (1h)
         reqRes: "quantum", reqContinent: "venus_base" 
     }
 ];
 
 export const RESEARCH_CONFIG = [
     { id: "basic_physics", name: "Podstawy Fizyki", baseProd: 1, baseTime: 5.0, unlockCost: 0 },
-    { id: "thermo", name: "Termodynamika", baseProd: 4, baseTime: 10.0, unlockCost: 1000 },
-    { id: "electr", name: "Elektryczność", baseProd: 10, baseTime: 20.0, unlockCost: 10000 },
+    { id: "thermo", name: "Termodynamika", baseProd: 4, baseTime: 15.0, unlockCost: 1000 },
+    { id: "electr", name: "Elektryczność", baseProd: 10, baseTime: 30.0, unlockCost: 10000 },
     // Zwiększone czasy badań
-    { id: "logistics", name: "Logistyka Stosowana", baseProd: 25, baseTime: 45.0, unlockCost: 50000 },
-    { id: "chemistry", name: "Chemia Przemysłowa", baseProd: 60, baseTime: 60.0, unlockCost: 250000 },
-    { id: "computing", name: "Informatyka", baseProd: 150, baseTime: 90.0, unlockCost: 1000000 },
-    { id: "robotics", name: "Robotyka", baseProd: 400, baseTime: 180.0, unlockCost: 5000000 },
-    { id: "ai_systems", name: "Systemy AI", baseProd: 1000, baseTime: 300.0, unlockCost: 25000000 },
-    { id: "nanotech", name: "Nanotechnologia", baseProd: 2500, baseTime: 600.0, unlockCost: 100000000 },
-    { id: "quantum", name: "Fizyka Kwantowa", baseProd: 10000, baseTime: 1200.0, unlockCost: 1000000000 }
+    { id: "logistics", name: "Logistyka Stosowana", baseProd: 25, baseTime: 60.0, unlockCost: 50000 },
+    { id: "chemistry", name: "Chemia Przemysłowa", baseProd: 60, baseTime: 120.0, unlockCost: 250000 },
+    { id: "computing", name: "Informatyka", baseProd: 150, baseTime: 240.0, unlockCost: 1000000 },
+    { id: "robotics", name: "Robotyka", baseProd: 400, baseTime: 480.0, unlockCost: 5000000 },
+    { id: "ai_systems", name: "Systemy AI", baseProd: 1000, baseTime: 960.0, unlockCost: 25000000 },
+    { id: "nanotech", name: "Nanotechnologia", baseProd: 2500, baseTime: 1920.0, unlockCost: 100000000 },
+    { id: "quantum", name: "Fizyka Kwantowa", baseProd: 10000, baseTime: 3840.0, unlockCost: 1000000000 }
 ];
 
 export const UPGRADES_CONFIG = [
-    // Zwiększony costMult (szybszy wzrost cen ulepszeń)
+    // Zwiększone costMult (drastycznie podbita cena kolejnych poziomów)
     { id: "lubricants", name: "Lepsze Smary", desc: "+20% prędkości.", baseCost: 10, costMult: 3.5, maxLevel: 10, effect: { type: "speed_mult", value: 0.20 } },
     { id: "training", name: "Szkolenie Kadr", desc: "+1 Max Energii.", baseCost: 50, costMult: 4.0, maxLevel: 5, effect: { type: "energy_max", value: 1 } },
     { id: "marketing", name: "Marketing", desc: "+50% Zysku ($).", baseCost: 200, costMult: 3.0, maxLevel: 20, effect: { type: "production_mult", value: 0.5 } },

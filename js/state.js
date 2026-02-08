@@ -1,17 +1,26 @@
-import { MACHINES_CONFIG, RESEARCH_CONFIG } from './data.js';
+// --- STATE MANAGEMENT ---
 
-const SAVE_KEY = 'industrial_evo_save_v8_final_fix'; // Nowy klucz wymusi czysty start
+const SAVE_KEY = 'industrial_evolution_v9'; // Zmiana wersji zapisu (ważne!)
 
-const defaultState = {
+const initialState = {
     resources: {
         money: 0,
         knowledge: 0,
         hrPoints: 0,
-        energyUsed: 0,
         energyMax: 10,
-        reputation: 0
+        energyUsed: 0,
+        reputation: 0,
+        optimization: 0 // NOWY ZASÓB
     },
+    machines: {}, // { id: { level: 1, unlocked: false, assignedEnergy: 0, currentProgress: 0 } }
+    research: {}, // { id: { level: 1, unlocked: false, assignedEnergy: 0, currentProgress: 0 } }
+    upgrades: {}, // { id: level }
+    employees: { pm: 0, opt: 0, log: 0 },
+    assignments: {}, // { machineId: { pm: 0, opt: 0, log: 0 } }
+    headhunters: [], // { id, name, bonus, targetId }
+    machineSpecialists: {}, // { machineId: specialistId }
     stats: {
+        startTime: Date.now(),
         runEarnings: 0,
         lifetimeEarnings: 0
     },
@@ -19,114 +28,110 @@ const defaultState = {
         planetIndex: 0,
         continentIndex: 0,
         countryIndex: 0
-    },
-    machines: {},
-    research: {},
-    upgrades: {},
-    employees: { pm: 0, opt: 0, log: 0 },
-    assignments: {},
-    headhunters: [],
-    machineSpecialists: {}
+    }
 };
 
-export function getFreshMachinesState() {
-    const machines = {};
-    MACHINES_CONFIG.forEach((m, index) => {
-        // Tylko bazowe maszyny (bez replaces/reqLoc) są kandydatami na start
-        const isBase = !m.replaces && !m.reqLoc;
-        machines[m.id] = {
-            level: 1,
-            assignedEnergy: 0,
-            currentProgress: 0,
-            unlocked: index === 0 && isBase 
-        };
-    });
-    return machines;
-}
+export let gameState = null;
 
-export function getFreshResearchState() {
-    const research = {};
-    RESEARCH_CONFIG.forEach((r, index) => {
-        research[r.id] = {
-            level: 1,
-            assignedEnergy: 0,
-            currentProgress: 0,
-            unlocked: index === 0
-        };
-    });
-    return research;
-}
-
-defaultState.machines = getFreshMachinesState();
-defaultState.research = getFreshResearchState();
-
-export let gameState = JSON.parse(JSON.stringify(defaultState));
-
-export function saveGame() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
-    console.log("Gra zapisana.");
+// Deep copy helper
+function deepCopy(obj) {
+    return JSON.parse(JSON.stringify(obj));
 }
 
 export function loadGame() {
-    try {
-        const saved = localStorage.getItem(SAVE_KEY);
-        if (saved) {
-            const loadedState = JSON.parse(saved);
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            // Merge z initialState na wypadek nowych pól w przyszłych wersjach
+            gameState = { ...deepCopy(initialState), ...parsed, resources: { ...deepCopy(initialState.resources), ...parsed.resources } };
             
-            // Bezpieczne scalanie
-            gameState = { 
-                ...defaultState, 
-                ...loadedState,
-                resources: { ...defaultState.resources, ...(loadedState.resources || {}) },
-                meta: { ...defaultState.meta, ...(loadedState.meta || {}) },
-                employees: { ...defaultState.employees, ...(loadedState.employees || {}) },
-                // Reset maszyn jeśli puste
-                machines: loadedState.machines || getFreshMachinesState(),
-                research: loadedState.research || getFreshResearchState()
-            };
+            // Fix dla zasobów podrzędnych (machines, research) jeśli są puste
+            if (!gameState.machines) gameState.machines = {};
+            if (!gameState.research) gameState.research = {};
+            if (!gameState.upgrades) gameState.upgrades = {};
+            
+            console.log("Game Loaded");
+        } catch (e) {
+            console.error("Save file corrupted, resetting.", e);
+            resetSave();
         }
-    } catch (e) {
-        console.error("Save corrupted, resetting.", e);
-        localStorage.removeItem(SAVE_KEY);
-        gameState = JSON.parse(JSON.stringify(defaultState));
+    } else {
+        resetSave();
     }
+    
+    // Inicjalizacja struktur dla maszyn/badań jeśli nie istnieją
+    // (To się dzieje w game.js przy pierwszym użyciu, ale tu warto wyczyścić starocie)
+}
+
+export function saveGame() {
+    if (!gameState) return;
+    localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+    console.log("Game Saved");
 }
 
 export function resetSave() {
-    if(confirm("HARD RESET: Czy na pewno usunąć cały postęp?")) {
-        localStorage.removeItem(SAVE_KEY);
-        location.reload();
-    }
+    gameState = deepCopy(initialState);
+    
+    // Inicjalizacja podstawowych maszyn (z data.js zrobimy to dynamicznie, 
+    // ale stan musi być czysty).
+    
+    // Odblokuj pierwszą maszynę manualnie w logice gry, tutaj tylko stan.
+    saveGame();
+    location.reload();
 }
 
-export function applyPrestigeReset(level) {
-    gameState.resources.money = 0;
-    gameState.resources.knowledge = 0;
-    gameState.resources.hrPoints = 0;
-    gameState.resources.energyUsed = 0;
-    gameState.resources.energyMax = 10;
-    gameState.stats.runEarnings = 0;
-    
-    gameState.machines = getFreshMachinesState();
-    gameState.research = getFreshResearchState();
-    gameState.upgrades = {};
-    gameState.employees = { pm: 0, opt: 0, log: 0 };
-    gameState.assignments = {};
-    gameState.headhunters = [];
-    gameState.machineSpecialists = {};
+// Funkcja obsługująca różne rodzaje resetu (Prestiż / Podróż)
+export function applyPrestigeReset(type) {
+    // Zachowujemy to co ma przetrwać
+    const currentRep = gameState.resources.reputation;
+    const currentOpt = gameState.resources.optimization; // Zachowaj OPT
+    const currentStats = gameState.stats;
+    const currentMeta = gameState.meta;
+    const currentHeadhunters = gameState.headhunters; // Headhunterzy zostają? Zazwyczaj tak w prestiżu.
+    // Decyzja: Przyjmijmy, że Headhunterzy zostają przy resecie kraju, ale przy resecie planety mogą znikać?
+    // Na razie zostawmy ich zawsze (są drodzy).
 
-    if (level === 'country') gameState.meta.countryIndex++;
-    else if (level === 'continent') {
-        gameState.meta.continentIndex++;
-        gameState.meta.countryIndex = 0;
+    // Reset stanu do czystego
+    const newState = deepCopy(initialState);
+
+    // Przywracanie wartości w zależności od typu resetu
+    newState.resources.reputation = currentRep;
+    newState.resources.optimization = currentOpt; // Przywróć OPT
+    newState.stats = currentStats;
+    newState.headhunters = currentHeadhunters;
+
+    if (type === 'restructuring') {
+        // Resetuje wszystko (lokację też? Zazwyczaj prestiż nie cofa lokacji w grach typu "podróż", 
+        // ale w tej grze "Restrukturyzacja" to miękki reset w obecnym miejscu).
+        // Zostajemy w tym samym kraju.
+        newState.meta = currentMeta;
+        
+        // Wyzeruj run earnings dla nowego runu
+        newState.stats.runEarnings = 0;
+    } 
+    else if (type === 'optimization') {
+        // Nowy typ: Optymalizacja. Działa jak Restrukturyzacja, ale daje OPT.
+        newState.meta = currentMeta;
+        newState.stats.runEarnings = 0;
     }
-    else if (level === 'planet') {
-        gameState.meta.planetIndex++;
-        gameState.meta.continentIndex = 0;
-        gameState.meta.countryIndex = 0;
-        gameState.resources.reputation = 0; 
+    else if (type === 'country') {
+        // Przeniesienie do nowego kraju (zachowaj Rep/Opt, zmień index)
+        newState.meta = currentMeta;
+        newState.stats.runEarnings = 0; // Nowy kraj = budowa od zera
     }
-    
+    else if (type === 'continent') {
+        // Nowy kontynent (zachowaj Rep/Opt, zmień index)
+        newState.meta = currentMeta;
+        newState.stats.runEarnings = 0;
+    }
+    else if (type === 'planet') {
+        // Nowa planeta (zachowaj Rep/Opt, zmień index)
+        newState.meta = currentMeta;
+        newState.stats.runEarnings = 0;
+    }
+
+    gameState = newState;
     saveGame();
     location.reload();
 }
