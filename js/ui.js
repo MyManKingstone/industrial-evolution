@@ -229,11 +229,13 @@ function renderListStructure(container, configArray, type) {
 
         const resourceIcon = type === 'research' ? 'Nauka: ' : '$';
         let hrSection = '';
-        if (type === 'machine') {
+        if (type === 'machine' || type === 'research') {
+            const pmLabel = type === 'machine' ? 'PM (+10% $)' : 'PM (+10% Nauka)';
+            const logLabel = type === 'machine' ? 'Log (+10% Spd)' : 'Log (+10% Spd Lab)';
             hrSection = `
             <div class="controls-section" style="margin-top: 10px; border-top: 1px dashed #444; padding-top: 5px;">
                 <div class="control-row">
-                    <span class="text-pm">PM (+10% $)</span>
+                    <span class="text-pm">${pmLabel}</span>
                     <span>
                         <span id="val-pm-${config.id}">0</span>/5 
                         <button class="btn-unassign-hr small-btn" data-id="${config.id}" data-type="pm">-</button>
@@ -249,16 +251,16 @@ function renderListStructure(container, configArray, type) {
                     </span>
                 </div>
                 <div class="control-row">
-                    <span class="text-log">Log (+10% Spd)</span>
+                    <span class="text-log">${logLabel}</span>
                     <span>
                         <span id="val-log-${config.id}">0</span>/5 
                         <button class="btn-unassign-hr small-btn" data-id="${config.id}" data-type="log">-</button>
                         <button class="btn-assign-hr small-btn" data-id="${config.id}" data-type="log">+</button>
                     </span>
                 </div>
-                <select class="specialist-select" data-id="${config.id}" id="sel-spec-${config.id}" style="width:100%; margin-top:5px; padding:5px; background:#333; color:white; border:1px solid #555;">
+                ${type === 'machine' ? `<select class="specialist-select" data-id="${config.id}" id="sel-spec-${config.id}" style="width:100%; margin-top:5px; padding:5px; background:#333; color:white; border:1px solid #555;">
                     <option value="">-- Wybierz Specjalistę --</option>
-                </select>
+                </select>` : ''}
             </div>`;
         }
 
@@ -631,7 +633,7 @@ function updateListUI(configArray, type) {
                 }
             }
 
-            if (type === 'machine') {
+            if (type === 'machine' || type === 'research') {
                 const staff = getAssignedStaff(config.id);
                 // NAPRAWA: Dodanie blokady wizualnej przycisków HR jeśli max
                 const btnAssignPm = card.querySelector(`button[data-type="pm"].btn-assign-hr`);

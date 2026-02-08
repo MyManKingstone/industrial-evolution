@@ -333,8 +333,12 @@ export function updateGame(deltaTime) {
         const resState = gameState.research[config.id];
         if (!resState.unlocked || resState.assignedEnergy <= 0) return;
         
-        // Lab ma inną prędkość (podwójna optymalizacja)
-        const progressAdded = deltaTime * resState.assignedEnergy * labSpeedMult;
+        // HR bonuses also apply to research
+        const hrLab = getHRBonuses(config.id);
+        
+        // Speed: lab multiplier (includes optymizacja) * HR staff speed mult
+        const totalLabSpeed = labSpeedMult * hrLab.speedMult;
+        const progressAdded = deltaTime * resState.assignedEnergy * totalLabSpeed;
         resState.currentProgress += progressAdded;
         
         if (resState.currentProgress >= config.baseTime) {
