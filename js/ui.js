@@ -167,6 +167,13 @@ export function initUI() {
         if (!btn) return;
         const id = btn.dataset.id;
         
+        // SPECJALNY HANDLER: Mega Produkcja - jednym klikiem (nie hold-to-buy)
+        if (btn.classList.contains('btn-buy-upgrade-once')) {
+            buyUpgrade(id);
+            updateUI();
+            return;
+        }
+        
         // Ignoruj te obsłużone przez hold-to-buy
         if (btn.classList.contains('btn-plus') || 
             btn.classList.contains('btn-minus') || 
@@ -289,12 +296,15 @@ function renderUpgradesList() {
         const div = document.createElement('div');
         div.className = 'upgrade-card';
         div.id = `upg-${up.id}`;
+        const currencySymbol = (up.currency === 'money') ? '$' : '🧬';
+        // Mega Produkcja kupowana jednym klikiem (nie hold-to-buy)
+        const buttonClass = (up.id === 'mega_production') ? 'btn-buy-upgrade-once' : 'btn-buy-upgrade';
         div.innerHTML = `
             <div>
                 <h4>${up.name} <span id="lvl-${up.id}" style="font-size:0.8em;">(0)</span></h4>
                 <div class="upgrade-desc">${up.desc}</div>
             </div>
-            <button class="btn-buy-upgrade" data-id="${up.id}">Kup (<span id="cost-${up.id}">${up.baseCost}</span>)</button>
+            <button class="${buttonClass}" data-id="${up.id}">Kup ${currencySymbol}(<span id="cost-${up.id}">${up.baseCost}</span>)</button>
         `;
         els.upgradesList.appendChild(div);
     });
@@ -492,10 +502,12 @@ export function updateUI() {
         const lvlEl = document.getElementById(`lvl-${up.id}`);
         const costEl = document.getElementById(`cost-${up.id}`);
         const btn = document.querySelector(`#upg-${up.id} button`);
+        const currency = up.currency || 'knowledge'; // Default to knowledge
+        const availableResource = (currency === 'money') ? gameState.resources.money : gameState.resources.knowledge;
 
         if(lvlEl) lvlEl.textContent = `(${currentLvl}/${up.maxLevel})`;
         if(costEl) costEl.textContent = currentLvl >= up.maxLevel ? "-" : formatNumber(currentCost);
-        if(btn) btn.disabled = gameState.resources.knowledge < currentCost || currentLvl >= up.maxLevel;
+        if(btn) btn.disabled = availableResource < currentCost || currentLvl >= up.maxLevel;
     });
 
     // 8. EXPANSION & HR
@@ -559,9 +571,11 @@ function updateListUI(configArray, type) {
             let effectiveEnergy = cappedEnergy;
             let hrSpeedMult = 1.0;
 
-            if (type === 'machine') {
+            if (type === 'machine' || type === 'research') {
                 const staff = getAssignedStaff(config.id);
-                effectiveEnergy += (staff.opt * 2);
+                if (type === 'machine') {
+                    effectiveEnergy += (staff.opt * 2);
+                }
                 hrSpeedMult = 1 + (staff.log * 0.10);
             }
 
@@ -609,26 +623,31 @@ function updateListUI(configArray, type) {
                 }
             }
 
-            // NAPRAWA: Wyświetlanie $/s lub Nauka/s
+            // NAPRAWA: Wyświetlanie produkcji per cykl gdy stoi, per s gdy pracuje
             const prodValEl = document.getElementById(`prod-val-${type}-${config.id}`);
             const unitEl = document.getElementById(`unit-${type}-${config.id}`);
             
             if (prodValEl) {
                 if (effectiveEnergy > 0) {
-                    let perSec = 0;
+                    let perCycle = 0;
                     if (type === 'machine') {
-                        const realProd = getRealMachineProduction(config.id);
-                        perSec = realProd / realCycleTime;
+                        perCycle = getRealMachineProduction(config.id);
                     } else {
-                        const realGain = getRealResearchProduction(config.id);
-                        perSec = realGain / realCycleTime;
+                        perCycle = getRealResearchProduction(config.id);
                     }
+                    // Przelicz na per sekundę
+                    let perSec = perCycle / realCycleTime;
                     prodValEl.textContent = formatNumber(perSec);
-                    // Zmiana tekstu jednostki
                     if (unitEl) unitEl.textContent = " / s";
                 } else {
-                    // Jeśli maszyna stoi, pokaż bazową produkcję (dla informacji)
-                    prodValEl.textContent = formatNumber(config.baseProd);
+                    // Gdy energia = 0, pokaż per cykl z bonusami
+                    let perCycle = 0;
+                    if (type === 'machine') {
+                        perCycle = getRealMachineProduction(config.id);
+                    } else {
+                        perCycle = getRealResearchProduction(config.id);
+                    }
+                    prodValEl.textContent = formatNumber(perCycle);
                     if (unitEl) unitEl.textContent = " / cykl";
                 }
             }

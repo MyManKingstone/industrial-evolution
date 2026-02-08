@@ -58,12 +58,14 @@ export function getRealResearchProduction(researchId) {
     const contMods = getContinentModifiers();
     const knowUpgrade = getUpgradeMultiplier('knowledge_mult');
     const repKnowMult = 1 + (gameState.resources.reputation * 0.05);
+    const hr = getHRBonuses(researchId); // HR bonuses also apply to research
     
-    // Baza * Level * Kontynent * Ulepszenia * Reputacja
+    // Baza * Level * Kontynent * Ulepszenia * Reputacja * HR
     let production = config.baseProd * state.level;
     production *= contMods.know;
     production *= knowUpgrade.multiplier;
     production *= repKnowMult;
+    production *= hr.prodMult; // PM staff +10% wiedzy
 
     return production;
 }
@@ -71,6 +73,7 @@ export function getRealResearchProduction(researchId) {
 // NOWOŚĆ: Centralna funkcja liczaca mnożniki prędkości (z Optymalizacją)
 export function getCalculatedSpeedMultipliers() {
     const speedUpgrade = getUpgradeMultiplier('speed_mult');
+    const researchSpeedUpgrade = getUpgradeMultiplier('research_speed_mult');
     const contMods = getContinentModifiers();
     
     // Optymalizacja: addytywny bonus (+0.10 za każdy punkt)
@@ -79,8 +82,8 @@ export function getCalculatedSpeedMultipliers() {
     // Prędkość Fabryk
     const factorySpeed = (speedUpgrade.multiplier * contMods.speedMult) + optSpeedBonus;
     
-    // Prędkość Laboratoriów (2x bonus z Optymalizacji)
-    const labSpeed = factorySpeed + optSpeedBonus;
+    // Prędkość Laboratoriów (2x bonus z Optymalizacji + ulepszenie Ekspedycji Naukowych)
+    const labSpeed = (factorySpeed + optSpeedBonus) * (1 + researchSpeedUpgrade.multiplier);
 
     return { speedMult: factorySpeed, labSpeedMult: labSpeed };
 }
@@ -423,11 +426,23 @@ export function buyMaxEnergy() {
 export function buyUpgrade(upgradeId) {
     const cost = getUpgradeCost(upgradeId);
     if (cost === Infinity) return false;
-    if (gameState.resources.knowledge >= cost) {
-        gameState.resources.knowledge -= cost;
-        if (!gameState.upgrades[upgradeId]) gameState.upgrades[upgradeId] = 0;
-        gameState.upgrades[upgradeId]++;
-        return true;
+    const config = UPGRADES_CONFIG.find(u => u.id === upgradeId);
+    const currency = config?.currency || 'knowledge'; // Default to knowledge
+    
+    if (currency === 'money') {
+        if (gameState.resources.money >= cost) {
+            gameState.resources.money -= cost;
+            if (!gameState.upgrades[upgradeId]) gameState.upgrades[upgradeId] = 0;
+            gameState.upgrades[upgradeId]++;
+            return true;
+        }
+    } else {
+        if (gameState.resources.knowledge >= cost) {
+            gameState.resources.knowledge -= cost;
+            if (!gameState.upgrades[upgradeId]) gameState.upgrades[upgradeId] = 0;
+            gameState.upgrades[upgradeId]++;
+            return true;
+        }
     }
     return false;
 }

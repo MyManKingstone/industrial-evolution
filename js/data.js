@@ -119,11 +119,16 @@ export const RESEARCH_CONFIG = [
 ];
 
 export const UPGRADES_CONFIG = [
-    // Zwiększone costMult (drastycznie podbita cena kolejnych poziomów)
-    { id: "lubricants", name: "Lepsze Smary", desc: "+20% prędkości.", baseCost: 10, costMult: 3.5, maxLevel: 10, effect: { type: "speed_mult", value: 0.20 } },
-    { id: "training", name: "Szkolenie Kadr", desc: "+1 Max Energii.", baseCost: 50, costMult: 4.0, maxLevel: 5, effect: { type: "energy_max", value: 1 } },
-    { id: "marketing", name: "Marketing", desc: "+50% Zysku ($).", baseCost: 200, costMult: 3.0, maxLevel: 20, effect: { type: "production_mult", value: 0.5 } },
-    { id: "research_grant", name: "Granty Naukowe", desc: "+25% Wiedzy.", baseCost: 100, costMult: 3.5, maxLevel: 10, effect: { type: "knowledge_mult", value: 0.25 } }
+    // Ulepszenia kupowalne za WIEDZĘ
+    { id: "lubricants", name: "Lepsze Smary", desc: "+20% prędkości.", baseCost: 10, costMult: 3.5, maxLevel: 10, currency: "knowledge", effect: { type: "speed_mult", value: 0.20 } },
+    { id: "training", name: "Szkolenie Kadr", desc: "+1 Max Energii.", baseCost: 50, costMult: 4.0, maxLevel: 5, currency: "knowledge", effect: { type: "energy_max", value: 1 } },
+    { id: "marketing", name: "Marketing", desc: "+50% Zysku ($).", baseCost: 200, costMult: 3.0, maxLevel: 20, currency: "knowledge", effect: { type: "production_mult", value: 0.5 } },
+    { id: "research_grant", name: "Granty Naukowe", desc: "+25% Wiedzy.", baseCost: 100, costMult: 3.5, maxLevel: 10, currency: "knowledge", effect: { type: "knowledge_mult", value: 0.25 } },
+    
+    // Ulepszenia kupowalne za GOTÓWKĘ
+    { id: "research_centers", name: "Ośrodki Badawcze", desc: "+50% Wiedzy.", baseCost: 500000, costMult: 4.0, maxLevel: 10, currency: "money", effect: { type: "knowledge_mult", value: 0.50 } },
+    { id: "research_expedition", name: "Ekspedycje Naukowe", desc: "+30% Prędkości Badań.", baseCost: 1000000, costMult: 4.0, maxLevel: 10, currency: "money", effect: { type: "research_speed_mult", value: 0.30 } },
+    { id: "mega_production", name: "Mega Produkcja", desc: "+10% Zarobków ($).", baseCost: 1000, costMult: 1.15, maxLevel: 100, currency: "money", effect: { type: "production_mult", value: 0.10 } }
 ];
 
 export const HR_CONFIG = [
